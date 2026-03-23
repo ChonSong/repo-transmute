@@ -1,0 +1,36 @@
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Data
+data/
+*.db
+*.sqlite
+
+# Caches
+.cache/
+*.egg-info/
+*.whl
+
+# Logs
+*.log
+
+# Milvus / embeddings cache
+~/.openclaw/cache/embeddings/
+
+# IDE
+.idea/
+.vscode/
+*.swp
