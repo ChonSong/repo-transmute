@@ -601,7 +601,7 @@ Requirements:
         print(f"Chunking repository: {repo_path.name}")
         
         # chunk_repository returns List[Chunk] directly
-        chunks = chunk_repository(repo_path, max_functions=self.max_functions_per_chunk)
+        chunks = chunk_repository(repo_path, chunk_size=self.max_functions_per_chunk)
         total_chunks = len(chunks)
         print(f"Created {total_chunks} chunks")
         

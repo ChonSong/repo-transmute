@@ -284,6 +284,19 @@ class Reassembler:
             written[rel_path] = out_path
             print(f"  Wrote {rel_path}")
 
+        # Fallback: if no files were written (LLM omitted ---FILE_SEPARATOR--- markers),
+        # write the combined output as a single file to avoid silent failures
+        if not written:
+            print(f"  WARNING: No files written -- LLM output may be missing ---FILE_SEPARATOR--- markers.")
+            print(f"  Raw combined length: {len(combined)} chars")
+            combined_stripped = combined.strip()
+            if combined_stripped:
+                out_path = output_dir / f"combined_output.{file_ext}"
+                out_path.write_text(combined_stripped + chr(10))
+                written[f"combined_output.{file_ext}"] = out_path
+                print(f"  WARNING: Fallback wrote combined output to {out_path}")
+
+
         return written
 
     def resolve_imports(self, global_exports: Optional[Dict[str, str]] = None) -> str:
