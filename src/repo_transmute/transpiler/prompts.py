@@ -14,26 +14,59 @@ def _esc(s: str) -> str:
 PYTHON_TO_TYPESCRIPT = (
     _esc(r"""You are an expert Python → TypeScript developer. Convert this blueprint to idiomatic TypeScript.
 
-CRITICAL RULES:
-- ALWAYS add imports for every built-in you use. If your code calls fs, add: import fs from "fs". If it uses path, add: import path from "path". If it uses process, add: import process from "process".
-- Output ONLY TypeScript code. NO markdown fences. NO explanations. NO comments outside the code.
-- NO invented imports. Use only: built-in JS APIs (JSON, Array, Object, Map, Set, Promise, console, Math, Date, RegExp, URL, fetch), or npm packages EXPLICITLY listed in the blueprint imports.
-- DO NOT import from "async", "json", "regex", "system", "os", "path" as npm packages.
-- For Node.js built-ins (fs, path, process, Buffer), add explicit imports:
-    import fs from "fs";
-    import path from "path";
-    import process from "process";
-- Convert Python docstrings to JSDoc format (/** */) on the line ABOVE the declaration.
-- For class methods: output the FULL implementation in TypeScript. NOT just a signature.
-- For standalone functions: output the FULL implementation in TypeScript.
-- NEVER include Python code or Python-like syntax in the output.
-- If unsure about an import, OMIT it rather than inventing it.
+CRITICAL RULES — NON-NEGOTIABLE:
+
+1. PYTHON NONE → TypeScript undefined (NOT null)
+   Python:  x = None        → TypeScript:  let x: string | undefined;
+   Python:  def foo() -> None  → TypeScript:  function foo(): void | undefined
+   NEVER use JavaScript null unless you explicitly mean "no value" in the JS sense.
+
+2. NODE.JS STD LIB IMPORT TABLE — apply whenever you see Python stdlib usage:
+   | Python                         | TypeScript (ALWAYS add import)              |
+   |-------------------------------|---------------------------------------------|
+   | import os; os.path.join()     | import path from "node:path";              |
+   | import os; os.path.dirname()  | path.dirname()                              |
+   | import os; os.getenv()        | import process from "node:process";         |
+   |                                | process.env["KEY"]                           |
+   | import os; os.makedirs()      | import fs from "node:fs";                   |
+   |                                | await fs.promises.mkdir(dir, {recursive:true})|
+   | import json; json.dumps()     | JSON.stringify()  (no import needed)       |
+   | import json; json.loads()     | JSON.parse()      (no import needed)       |
+   | import datetime; datetime...  | import { Date } from "jsr:@std/datetime";  |
+   |                                | OR use native JS Date                        |
+   | import re; re.match()         | import { RegExp } from "jsr:@std/regexp";  |
+   |                                | OR use native JS /pattern/                   |
+   | import uuid; uuid.uuid4()      | import { randomUUID } from "node:crypto";  |
+   |                                | crypto.randomUUID()                          |
+   | import base64                  | import { Buffer } from "node:buffer";       |
+   |                                | Buffer.from(...).toString("base64")          |
+   | open(path, "r") / Path(...).read_text() | import fs from "node:fs";  |
+   |                                | await fs.promises.readFile(path, "utf-8")    |
+
+   If the blueprint uses any "os", "pathlib", "path", "base64", or "uuid" — you MUST add the corresponding import above.
+
+3. ADD IMPORTS BEFORE ANY USAGE — put all imports at the top of the file, before any function/class definitions.
+
+4. OUTPUT ONLY TypeScript code. NO markdown fences. NO explanations. NO comments outside the code.
+
+5. NO invented imports. Only: built-in JS APIs (JSON, Array, Object, Map, Set, Promise, console, Math, Date, RegExp, URL, fetch, crypto), Node.js built-ins via node: prefix (node:fs, node:path, node:process, node:buffer, node:crypto), or npm packages EXPLICITLY listed in the blueprint imports.
+
+6. Convert Python docstrings to JSDoc format (/** */) on the line ABOVE the declaration.
+
+7. For class methods: output the FULL implementation in TypeScript. NOT just a signature.
+
+8. For standalone functions: output the FULL implementation in TypeScript.
+
+9. NEVER include Python code or Python-like syntax in the output.
 
 FEW-SHOT EXAMPLES:
 
 === EXAMPLE 1: Python class -> TypeScript class with full method bodies ===
 
 Blueprint source:
+# Source imports (use as hints only):
+#   import os
+#   import json
 # Data Structures:
 # Config (class)
 # Fields:
@@ -54,8 +87,8 @@ Blueprint source:
 Expected output:
 """) +
     _esc(r"""// filename: src/Config.ts
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 
 export interface ConfigData {
   host: string;
@@ -79,7 +112,7 @@ export class Config implements ConfigData {
   }
 
   /** Save config to a JSON file. */
-  async save(filePath: string): Promise<void> {
+  async save(filePath: string): Promise<void | undefined> {
     const dir = path.dirname(filePath);
     await fs.promises.mkdir(dir, { recursive: true });
     await fs.promises.writeFile(filePath, JSON.stringify(this, null, 2), "utf-8");
@@ -87,57 +120,67 @@ export class Config implements ConfigData {
 }
 === END EXAMPLE ===
 
-=== EXAMPLE 2: Python standalone function -> TypeScript with full body ===
+=== EXAMPLE 2: Python standalone function -> TypeScript with full body, path usage ===
 
 Blueprint source:
+# Source imports (use as hints only):
+#   import os
+#   import base64
 # Functions (grouped by module):
 ## utils.py
-# # detect_image_mime
-# <doc>Detect MIME type from file magic bytes.</doc>
-# def detect_image_mime(raw: bytes) -> str | None:
-#     MAGIC = {b"\xff\xd8\xff": "image/jpeg", b"\x89PNG": "image/png"}
-#     for magic, mime in MAGIC.items():
-#         if raw.startswith(magic):
-#             return mime
-#     return None
+# # encode_file
+# <doc>Encode a file to base64.</doc>
+# def encode_file(file_path: str) -> str:
+#     with open(file_path, "rb") as f:
+#         return base64.b64encode(f.read()).decode()
+# # ensure_dir
+# <doc>Ensure directory exists.</doc>
+# def ensure_dir(dir_path: str) -> None:
+#     os.makedirs(dir_path, exist_ok=True)
 
 Expected output:
 """) +
     _esc(r"""// filename: src/utils.ts
-import fs from "fs";
+import fs from "node:fs";
+import path from "node:path";
+import { Buffer } from "node:buffer";
 
-const MAGIC_BYTES: Record<string, string> = {
-  "\\xff\\xd8\\xff": "image/jpeg",
-  "\\x89PNG": "image/png",
-  "GIF87a": "image/gif",
-  "GIF89a": "image/gif",
-};
+/** Encode a file to base64. */
+export function encodeFile(filePath: string): string {
+  const content = fs.readFileSync(filePath);
+  return Buffer.from(content).toString("base64");
+}
 
-/** Detect MIME type from file magic bytes. */
-export async function detectImageMime(filePath: string): Promise<string | null> {
-  const buf = await fs.promises.readFile(filePath);
-  for (const [magic, mime] of Object.entries(MAGIC_BYTES)) {
-    if (buf.slice(0, magic.length).toString("binary") === magic) {
-      return mime;
-    }
-  }
-  return null;
+/** Ensure directory exists. */
+export function ensureDir(dirPath: string): void | undefined {
+  fs.promises.mkdir(dirPath, { recursive: true });
 }
 === END EXAMPLE ===
 
-=== EXAMPLE 3: Python from/import -> handled correctly ===
+=== EXAMPLE 3: Python function with os.getenv and os.path ===
 
 Blueprint source:
-# Source imports (use as hints only, do NOT blindly import):
-#   from pathlib import Path
-#   import json
+# Source imports (use as hints only):
+#   import os
+# Functions (grouped by module):
+## config.py
+# # get_data_dir
+# <doc>Get the data directory path.</doc>
+# def get_data_dir() -> str:
+#     base = os.getenv("DATA_DIR", "/tmp")
+#     return os.path.join(base, "myapp")
 
 Expected output:
 """) +
-    _esc(r"""// filename: src/main.ts
-import fs from "fs";
-// Path operations use string paths directly (no Path class import needed)
-// json handled via global JSON object (no import needed)
+    _esc(r"""// filename: src/config.ts
+import path from "node:path";
+import process from "node:process";
+
+/** Get the data directory path. */
+export function getDataDir(): string {
+  const base = process.env["DATA_DIR"] ?? "/tmp";
+  return path.join(base, "myapp");
+}
 === END EXAMPLE ===
 
 Now transpile the following blueprint to TypeScript:
