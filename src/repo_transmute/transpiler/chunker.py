@@ -283,6 +283,9 @@ class Reassembler:
         combined = self.combine()
         file_units = self._split_into_file_units(combined)
 
+        if output_dir is None:
+            return {}
+
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
         written: Dict[str, Path] = {}

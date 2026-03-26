@@ -14,6 +14,7 @@ from repo_transmute.pipeline.coordinator import (
     IntegrationValidator,
     generate_module_tests,
     ValidationReport,
+    PipelineResult,
 )
 from repo_transmute.transpiler.chunker import Chunk, Reassembler, chunk_repository
 
@@ -518,3 +519,111 @@ class TestValidationReport:
     def test_is_valid_false_type(self):
         report = ValidationReport(import_valid=True, type_valid=False)
         assert report.is_valid is False
+
+
+# ---------------------------------------------------------------------------
+# PipelineCoordinator — write_files integration
+# ---------------------------------------------------------------------------
+
+class TestPipelineCoordinatorWriteFiles:
+    """Tests for PipelineCoordinator.transpile_all_chunks calling write_files()."""
+
+    def test_transpile_all_chunks_calls_write_files(self, sample_chunks, tmp_path):
+        """transpile_all_chunks must return written_paths from reassembler.write_files()."""
+        coord = PipelineCoordinator(target_lang="typescript", max_passes=1)
+        coord.transpiler.transpile = lambda path, target, output_dir=None: (
+            "// filename: test.ts\nexport function test(): void { }"
+        )
+
+        from repo_transmute.transpiler.chunker import Reassembler
+        original = Reassembler.write_files
+        captured_calls = []
+
+        def capturing_write_files(self, output_dir, file_ext="ts"):
+            result = original(self, output_dir, file_ext)
+            captured_calls.append(result)
+            return result
+
+        Reassembler.write_files = capturing_write_files
+        try:
+            combined, processed, total, written = coord.transpile_all_chunks(
+                repo_path=tmp_path,
+                language="python",
+                output_dir=tmp_path / "out"
+            )
+            # written is the 4th return value — must be a list
+            assert isinstance(written, list), f"expected list, got {type(written)}"
+            # captured_calls[0] is the dict from write_files; written should be list(captured_calls[0].values())
+            if captured_calls:
+                expected = [str(p) for p in captured_calls[0].values()]
+                assert written == expected, f"expected {expected}, got {written}"
+        finally:
+            Reassembler.write_files = original
+
+    def test_transpile_all_chunks_no_output_dir_returns_empty_list(self, sample_chunks, tmp_path):
+        """When output_dir is None, write_files returns {} → written=[]."""
+        coord = PipelineCoordinator(target_lang="typescript", max_passes=1)
+        coord.transpiler.transpile = lambda path, target, output_dir=None: (
+            "// filename: test.ts\nexport function test(): void { }"
+        )
+
+        combined, processed, total, written = coord.transpile_all_chunks(
+            repo_path=tmp_path,
+            language="python",
+            output_dir=None
+        )
+        assert isinstance(written, list)
+        assert written == [], f"expected [] when output_dir=None, got {written}"
+
+    def test_pipeline_result_has_files_written_field(self):
+        """PipelineResult dataclass must include files_written."""
+        from dataclasses import fields
+        field_names = [f.name for f in fields(PipelineResult)]
+        assert "files_written" in field_names
+
+    def test_write_files_returns_correct_extension(self):
+        """_get_extension() returns the right file extension per target language."""
+        coord_ts = PipelineCoordinator(target_lang="typescript")
+        assert coord_ts._get_extension() == "ts"
+
+        coord_rs = PipelineCoordinator(target_lang="rust")
+        assert coord_rs._get_extension() == "rs"
+
+        coord_py = PipelineCoordinator(target_lang="python")
+        assert coord_py._get_extension() == "py"
+
+    def test_write_files_handles_none_output_dir(self, sample_chunks, tmp_path):
+        """Reassembler.write_files must not crash when output_dir is None."""
+        from repo_transmute.transpiler.chunker import Reassembler
+        chunk0 = sample_chunks[0]
+        r = Reassembler([chunk0], tmp_path)
+        r.add_transpiled(0, "// filename: test.ts\nexport function test(): void { }")
+        # Must not raise
+        result = r.write_files(None, "ts")
+        assert result == {}
+
+    def test_transpile_all_chunks_write_files_receives_correct_extension(self, sample_chunks, tmp_path):
+        """write_files is called with the target-language extension."""
+        coord = PipelineCoordinator(target_lang="rust", max_passes=1)
+        coord.transpiler.transpile = lambda path, target, output_dir=None: (
+            "// filename: lib.rs\npub fn test() { }"
+        )
+
+        from repo_transmute.transpiler.chunker import Reassembler
+        original = Reassembler.write_files
+        captured_exts = []
+
+        def capturing_write_files(self, output_dir, file_ext="ts"):
+            captured_exts.append(file_ext)
+            return original(self, output_dir, file_ext)
+
+        Reassembler.write_files = capturing_write_files
+        try:
+            combined, processed, total, written = coord.transpile_all_chunks(
+                repo_path=tmp_path,
+                language="python",
+                output_dir=tmp_path / "out"
+            )
+            assert "rs" in captured_exts, f"expected 'rs' extension, got {captured_exts}"
+        finally:
+            Reassembler.write_files = original
