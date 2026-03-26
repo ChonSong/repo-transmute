@@ -63,7 +63,7 @@ class Transpiler:
         with open(blueprint_path) as f:
             blueprint = yaml.safe_load(f)
 
-        source_lang = blueprint.get("source", {}).get("language", "python")
+        source_lang = blueprint.get("blueprint", {}).get("language", "python")
         prompt = build_transpile_prompt(blueprint, source_lang, target_lang)
 
         if "MiniMax" in self.model:
@@ -75,7 +75,7 @@ class Transpiler:
 
         if output_dir:
             output_dir.mkdir(parents=True, exist_ok=True)
-            source_repo = blueprint.get("source", {}).get("repo", "unknown")
+            source_repo = blueprint.get("blueprint", {}).get("repo", "unknown")
             ext = "ts" if target_lang == "typescript" else target_lang[:2]
             output_file = output_dir / f"{source_repo.replace('/', '__')}_{target_lang}.{ext}"
             output_file.write_text(result)
