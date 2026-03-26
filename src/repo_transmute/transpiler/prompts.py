@@ -1,12 +1,24 @@
-r"""Prompt templates for transpilation — includes full function bodies and few-shot examples."""
+r"""Prompt templates for transpilation — few-shot examples with safe placeholder escaping."""
 
-PYTHON_TO_TYPESCRIPT_PROMPT = r"""You are an expert Python → TypeScript developer. Convert this blueprint to idiomatic TypeScript.
+from pathlib import Path
+
+import yaml
+
+
+def _esc(s: str) -> str:
+    """Escape { braces } that are not template placeholders for str.format()."""
+    # Replace bare { with {{  and } with }}  but preserve {blueprint_content}
+    return s.replace("{blueprint_content}", "<<BLUEPRINT_PLACEHOLDER>>").replace("{", "{{").replace("}", "}}").replace("<<BLUEPRINT_PLACEHOLDER>>", "{blueprint_content}")
+
+
+PYTHON_TO_TYPESCRIPT = (
+    _esc(r"""You are an expert Python → TypeScript developer. Convert this blueprint to idiomatic TypeScript.
 
 CRITICAL RULES:
 - Output ONLY TypeScript code. NO markdown fences. NO explanations. NO comments outside the code.
-- NO invented imports. Use only: built-in JS APIs (JSON, Array, Object, Map, Set, Promise, console, Math, Date, RegExp, URL, fetch), or npm packages that are EXPLICITLY listed in the blueprint imports.
+- NO invented imports. Use only: built-in JS APIs (JSON, Array, Object, Map, Set, Promise, console, Math, Date, RegExp, URL, fetch), or npm packages EXPLICITLY listed in the blueprint imports.
 - DO NOT import from "async", "json", "regex", "system", "os", "path" as npm packages.
-- For Node.js built-ins (fs, path, process, Buffer), add explicit imports, e.g.:
+- For Node.js built-ins (fs, path, process, Buffer), add explicit imports:
     import fs from "fs";
     import path from "path";
     import process from "process";
@@ -39,7 +51,8 @@ Blueprint source:
 #         json.dump(self.__dict__, f)
 
 Expected output:
-""" + """// filename: src/Config.ts
+""") +
+    _esc(r"""// filename: src/Config.ts
 import fs from "fs";
 import path from "path";
 
@@ -48,9 +61,6 @@ export interface ConfigData {
   port: number;
 }
 
-/**
- * Application configuration loaded from a JSON file.
- */
 export class Config implements ConfigData {
   host: string;
   port: number;
@@ -60,18 +70,14 @@ export class Config implements ConfigData {
     this.port = port;
   }
 
-  /**
-   * Load config from a JSON file.
-   */
+  /** Load config from a JSON file. */
   static async load(filePath: string): Promise<Config> {
     const content = await fs.promises.readFile(filePath, "utf-8");
     const data = JSON.parse(content) as ConfigData;
     return new Config(data.host, data.port);
   }
 
-  /**
-   * Save config to a JSON file.
-   */
+  /** Save config to a JSON file. */
   async save(filePath: string): Promise<void> {
     const dir = path.dirname(filePath);
     await fs.promises.mkdir(dir, { recursive: true });
@@ -95,7 +101,8 @@ Blueprint source:
 #     return None
 
 Expected output:
-""" + """// filename: src/utils.ts
+""") +
+    _esc(r"""// filename: src/utils.ts
 import fs from "fs";
 
 const MAGIC_BYTES: Record<string, string> = {
@@ -105,9 +112,7 @@ const MAGIC_BYTES: Record<string, string> = {
   "GIF89a": "image/gif",
 };
 
-/**
- * Detect MIME type from file magic bytes.
- */
+/** Detect MIME type from file magic bytes. */
 export async function detectImageMime(filePath: string): Promise<string | null> {
   const buf = await fs.promises.readFile(filePath);
   for (const [magic, mime] of Object.entries(MAGIC_BYTES)) {
@@ -127,19 +132,20 @@ Blueprint source:
 #   import json
 
 Expected output:
-""" + """// filename: src/main.ts
+""") +
+    _esc(r"""// filename: src/main.ts
 import fs from "fs";
-// Note: Path operations use string paths directly (no Path class import)
-// Note: json handled via global JSON object (no import needed)
+// Path operations use string paths directly (no Path class import needed)
+// json handled via global JSON object (no import needed)
 === END EXAMPLE ===
 
 Now transpile the following blueprint to TypeScript:
 
-""" + """
 {blueprint_content}
-"""
+"""))
 
-PYTHON_TO_RUST_PROMPT = r"""You are an expert Python to Rust developer. Convert this blueprint to idiomatic Rust.
+
+PYTHON_TO_RUST = r"""You are an expert Python to Rust developer. Convert this blueprint to idiomatic Rust.
 
 CRITICAL RULES:
 - Output ONLY Rust code. NO markdown fences. NO explanations.
@@ -163,7 +169,7 @@ Blueprint:
 {blueprint_content}
 """
 
-PYTHON_TO_PYTHON_PROMPT = r"""You are an expert Python developer. Improve this Python blueprint with better patterns.
+PYTHON_TO_PYTHON = r"""You are an expert Python developer. Improve this Python blueprint with better patterns.
 
 CRITICAL RULES:
 - Output ONLY Python code. NO markdown fences. NO explanations.
@@ -183,7 +189,7 @@ Blueprint:
 {blueprint_content}
 """
 
-TYPESCRIPT_TO_TYPESCRIPT_PROMPT = r"""You are an expert TypeScript developer. Convert this blueprint to idiomatic TypeScript with improved types and patterns.
+TYPESCRIPT_TO_TYPESCRIPT = r"""You are an expert TypeScript developer. Convert this blueprint to idiomatic TypeScript with improved types and patterns.
 
 CRITICAL RULES:
 - Output ONLY TypeScript code. NO markdown fences. NO explanations.
@@ -205,7 +211,7 @@ Blueprint:
 {blueprint_content}
 """
 
-JAVASCRIPT_TO_TYPESCRIPT_PROMPT = r"""You are an expert JavaScript to TypeScript developer. Convert this blueprint to idiomatic TypeScript.
+JAVASCRIPT_TO_TYPESCRIPT = r"""You are an expert JavaScript to TypeScript developer. Convert this blueprint to idiomatic TypeScript.
 
 CRITICAL RULES:
 - Output ONLY TypeScript code. NO markdown fences. NO explanations.
@@ -290,9 +296,7 @@ def build_transpile_prompt(
 ) -> str:
     """
     Build a transpilation prompt from a blueprint dict.
-
     Includes FULL function bodies, grouped by module.
-    Selects the right template based on source + target language pair.
     """
     funcs = blueprint.get("blueprint", {}).get("functions", [])
     data_structs = blueprint.get("blueprint", {}).get("data_structures", [])
@@ -304,7 +308,6 @@ def build_transpile_prompt(
 
     content_parts: list[str] = []
 
-    # Include source imports as hints (for validity checking)
     imports = blueprint.get("blueprint", {}).get("imports", [])
     if imports and source_lang == "python":
         content_parts.append("# Source imports (use as hints only, do NOT blindly import):")
@@ -340,20 +343,20 @@ def build_transpile_prompt(
     if source_lower == "python" and target_lower in ("typescript", "ts"):
         if has_tsx:
             return TSX_TEMPLATE.format(blueprint_content=content)
-        return PYTHON_TO_TYPESCRIPT_PROMPT.format(blueprint_content=content)
+        return PYTHON_TO_TYPESCRIPT.format(blueprint_content=content)
 
     if source_lower == "python" and target_lower == "python":
-        return PYTHON_TO_PYTHON_PROMPT.format(blueprint_content=content)
+        return PYTHON_TO_PYTHON.format(blueprint_content=content)
 
     if source_lower == "python" and target_lower == "rust":
-        return PYTHON_TO_RUST_PROMPT.format(blueprint_content=content)
+        return PYTHON_TO_RUST.format(blueprint_content=content)
 
     if source_lower in ("typescript", "ts") and target_lower in ("typescript", "ts"):
         if has_tsx:
             return TSX_TEMPLATE.format(blueprint_content=content)
-        return TYPESCRIPT_TO_TYPESCRIPT_PROMPT.format(blueprint_content=content)
+        return TYPESCRIPT_TO_TYPESCRIPT.format(blueprint_content=content)
 
     if source_lower in ("javascript", "js"):
-        return JAVASCRIPT_TO_TYPESCRIPT_PROMPT.format(blueprint_content=content)
+        return JAVASCRIPT_TO_TYPESCRIPT.format(blueprint_content=content)
 
     return f"Convert this {source_lang} code to {target_lang}:\n\n{content}"
