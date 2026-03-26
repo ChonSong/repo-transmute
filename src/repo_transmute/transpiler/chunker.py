@@ -233,12 +233,46 @@ class Reassembler:
             parts.append(code)
         return "\n".join(parts)
 
+    def _split_into_file_units(self, combined: str) -> List[str]:
+        """
+        Split combined output into individual file units.
+
+        Handles two markers:
+        - ``---FILE_SEPARATOR---`` — explicit LLM-provided file boundary
+        - ``// filename: <path>`` — per-file marker (may appear at start of
+          string or after ``---FILE_SEPARATOR---``)
+
+        When two ``// filename:`` markers end up in the same part (i.e. no
+          ``---FILE_SEPARATOR---`` between them), we split on that marker directly.
+        """
+        # Remove chunk header comments that combine() adds
+        stripped = re.sub(r"\n# ===== Chunk \d+:.*?=====\n", "\n", combined)
+
+        # Fast path: ---FILE_SEPARATOR--- markers present — use them directly
+        if "---FILE_SEPARATOR---" in stripped:
+            raw_parts = re.split(r"---FILE_SEPARATOR---\n?", stripped)
+        else:
+            raw_parts = [stripped]
+
+        # Each raw part may contain one or more // filename: blocks.
+        # Split on ^// ?filename: (start of line after any separator) to isolate them.
+        file_units: List[str] = []
+        for raw in raw_parts:
+            pieces = re.split(r"(?:^|\n)(?=// ?filename:)", raw)
+            for piece in pieces:
+                stripped_piece = piece.strip()
+                if stripped_piece:
+                    file_units.append(stripped_piece)
+
+        return file_units
+
     def write_files(self, output_dir: Path, file_ext: str = "ts") -> Dict[str, Path]:
         """
         Write transpiled chunks to files, preserving directory structure.
 
-        Parses the combined output for ---FILE_SEPARATOR--- markers and
-        writes each file to the appropriate path under output_dir.
+        Parses the combined output for ``---FILE_SEPARATOR---`` and
+        ``// filename: <path>`` markers and writes each unit to the
+        appropriate path under ``output_dir``.
 
         Returns:
             Dict mapping relative file paths to written Path objects
@@ -247,55 +281,50 @@ class Reassembler:
             return {}
 
         combined = self.combine()
-        # Remove chunk header comments
-        combined = re.sub(r"\n# ===== Chunk \d+:.*?=====\n", "\n", combined)
+        file_units = self._split_into_file_units(combined)
 
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
         written: Dict[str, Path] = {}
 
-        # Split on ---FILE_SEPARATOR--- markers
-        parts = re.split(r"---FILE_SEPARATOR---\n?", combined)
-
-        for part in parts:
-            part = part.strip()
-            if not part:
+        for unit in file_units:
+            filename_match = re.search(r"// ?filename: ?(.+)", unit)
+            if filename_match:
+                # Explicit filename marker: write to the specified path
+                rel_path = filename_match.group(1).strip()
+                code = re.sub(r"// ?filename: ?.+\n?", "", unit, count=1)
+                rel_path = rel_path.lstrip("/")
+                out_path = output_dir / rel_path
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                out_path.write_text(code.strip() + "\n")
+                written[rel_path] = out_path
                 continue
 
-            filename_match = re.search(r"// ?filename: ?(.+)", part)
-            if filename_match:
-                rel_path = filename_match.group(1).strip()
-                code = re.sub(r"// ?filename: ?.+\n?", "", part, count=1)
+            # No filename marker: try to detect a function or class name.
+            # Only write if one is found; otherwise let fallback handle it.
+            func_match = re.search(r"(?:export\s+)?(?:async\s+)?function\s+(\w+)", unit)
+            cls_match = re.search(r"class\s+(\w+)", unit)
+            if func_match:
+                name = func_match.group(1)
+            elif cls_match:
+                name = cls_match.group(1)
             else:
-                func_match = re.search(r"(?:export\s+)?(?:async\s+)?function\s+(\w+)", part)
-                cls_match = re.search(r"class\s+(\w+)", part)
-                if func_match:
-                    name = func_match.group(1)
-                elif cls_match:
-                    name = cls_match.group(1)
-                else:
-                    name = "output"
-                rel_path = f"generated/{name}.{file_ext}"
+                # No filename marker and no func/class — skip so fallback fires
+                continue
 
+            rel_path = f"generated/{name}.{file_ext}"
             rel_path = rel_path.lstrip("/")
             out_path = output_dir / rel_path
             out_path.parent.mkdir(parents=True, exist_ok=True)
-            out_path.write_text(code.strip() + "\n")
+            out_path.write_text(unit.strip() + "\n")
             written[rel_path] = out_path
-            print(f"  Wrote {rel_path}")
 
-        # Fallback: if no files were written (LLM omitted ---FILE_SEPARATOR--- markers),
-        # write the combined output as a single file to avoid silent failures
-        if not written:
-            print(f"  WARNING: No files written -- LLM output may be missing ---FILE_SEPARATOR--- markers.")
-            print(f"  Raw combined length: {len(combined)} chars")
-            combined_stripped = combined.strip()
-            if combined_stripped:
-                out_path = output_dir / f"combined_output.{file_ext}"
-                out_path.write_text(combined_stripped + chr(10))
-                written[f"combined_output.{file_ext}"] = out_path
-                print(f"  WARNING: Fallback wrote combined output to {out_path}")
-
+        # Fallback: if we had content but no ---FILE_SEPARATOR--- or // filename:
+        # markers were present, write everything as a single combined file.
+        if not written and combined.strip():
+            out_path = output_dir / f"combined_output.{file_ext}"
+            out_path.write_text(combined.strip() + "\n")
+            written[f"combined_output.{file_ext}"] = out_path
 
         return written
 
