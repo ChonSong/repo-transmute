@@ -64,14 +64,14 @@ def _get_decorators(node: ast.FunctionDef) -> List[str]:
         if isinstance(decorator, ast.Name):
             decorators.append(decorator.id)
         elif isinstance(decorator, ast.Attribute):
-            # Handle @staticmethod.foo() style
-            decorators.append(f"{decorator.value.id}.{decorator.attr}")
+            # ast.unparse handles all Attribute chains correctly,
+            # including @staticmethod.foo(), @pytest.mark.asyncio, etc.
+            decorators.append(ast.unparse(decorator))
         elif isinstance(decorator, ast.Call):
-            # Handle @decorator() calls
-            if isinstance(decorator.func, ast.Name):
-                decorators.append(decorator.func.id)
-            elif isinstance(decorator.func, ast.Attribute):
-                decorators.append(f"{decorator.func.value.id}.{decorator.func.attr}")
+            # ast.unparse handles chains of any depth robustly:
+            #   @pytest.mark.asyncio()   → Call(Attribute(...))
+            #   @router.get('/')          → Call(Attribute(...))
+            decorators.append(ast.unparse(decorator.func))
     return decorators
 
 
@@ -318,64 +318,156 @@ def _extract_classes_regex(file_path: Path) -> List[DataStructure]:
     return classes
 
 
+def _extract_js_arrow_params(left: str) -> tuple:
+    """Parse the left side of an arrow (before '=>') to extract name and params.
+    
+    Returns (name, params_str, is_async).  Returns (None, None, is_async) for
+    HOF/callback patterns (e.g.  useMemo(() => {)  where params don't start with '('.
+    """
+    left = left.strip()
+    is_async = bool(re.search(r'\basync\b', left))
+    
+    # Remove 'export' keyword
+    left = re.sub(r'\bexport\b', '', left).strip()
+    
+    # Extract: const/let/var NAME = ...
+    decl_pattern = r'(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?'
+    decl_match = re.match(decl_pattern, left)
+    if not decl_match:
+        return None, None, is_async
+    
+    name = decl_match.group(1)
+    after_decl = left[decl_match.end():].strip()
+    
+    # If params don't start with '(' it's a HOF callback — skip
+    #   e.g.  useMemo(() => {   → after_decl = "useMemo(()"
+    #        x.map(y => y * 2)  → after_decl = "x.map(y"
+    if not after_decl.startswith('('):
+        return None, None, is_async
+    
+    # Parens must be balanced for a valid arrow function parameter list
+    depth = 0
+    end_idx = 0
+    for ci, ch in enumerate(after_decl):
+        if ch == '(':
+            depth += 1
+        elif ch == ')':
+            depth -= 1
+            if depth == 0:
+                end_idx = ci
+                break
+    
+    # If we never found a matching ')', it's unbalanced (e.g. useMemo(() => {)
+    if end_idx == 0:
+        return None, None, is_async
+    
+    params = after_decl[1:end_idx]
+    return name, params.strip(), is_async
+
+
 def extract_from_javascript(file_path: Path) -> List[Function]:
-    """Extract functions from JavaScript/TypeScript."""
+    """Extract functions from JavaScript/TypeScript/JSX/TSX.
+    
+    Handles:
+      - function declarations:        function name(params) { ... }
+      - export function:              export function name(params) { ... }
+      - export default function:      export default function name(params) { ... }
+      - export default function():     export default function(params) { ... }
+      - arrow functions (block):       const name = async (params) => { ... }
+      - arrow functions (expr):        const name = (params) => expr
+      - named export:                  export { name }
+    """
     content = file_path.read_text()
+    lines = content.split('\n')
     functions = []
     
-    # More comprehensive patterns for JS/ES6
-    patterns = [
-        # function declarations
-        (r'^(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*[\(\=]', False),
-        # arrow functions: const name = (params) =>
-        (r'^(?:export\s+)?const\s+(\w+)\s*=\s*(?:async\s+)?\(?(.*?)\)?\s*=>', True),
-        # arrow functions: const name = async (params) =>
-        (r'^(?:export\s+)?const\s+(\w+)\s*=\s*async\s*\(?(.*?)\)?\s*=>', True),
-        # let/var name = (params) =>
-        (r'^(?:export\s+)?(?:let|var)\s+(\w+)\s*=\s*(?:async\s+)?\(?(.*?)\)?\s*=>', True),
-        # export default function
-        (r'^(?:export\s+)?export\s+default\s+(?:async\s+)?function\s+(?:\w+)?\s*\(?(.*?)\)?', False),
-        # export default arrow: export default (params) =>
-        (r'^(?:export\s+)?export\s+default\s+(?:async\s+)?\(?(.*?)\)?\s*=>', False),
-        # method in object: methodName(params) {
-        (r'^(\w+)\s*\(?(.*?)\)?\s*\{', False),
-        # class methods: methodName() {
-        (r'^\s*(?:async\s+)?(\w+)\s*\(?(.*?)\)?\s*(?:\{|:)', False),
-    ]
+    # Keyword blocklist — skip spurious matches on these names
+    keywords = {
+        'if', 'else', 'for', 'while', 'switch', 'try', 'catch', 'finally',
+        'return', 'import', 'export', 'from', 'const', 'let', 'var',
+        'class', 'function', 'async', 'typeof', 'void', 'delete',
+        'new', 'this', 'super', 'extends', 'implements', 'static',
+        'constructor', 'get', 'set', 'default',
+    }
     
-    for i, line in enumerate(content.split("\n"), 1):
-        # Skip comments and empty lines
+    # Regex patterns for single-line detection
+    FUNC_DECL_RE = re.compile(
+        r'^(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\((.*?)\)\s*(?:=>)?\s*\{'
+    )
+    EXPORT_DEFAULT_FUNC_RE = re.compile(
+        r'^(?:export\s+)?export\s+default\s+(?:async\s+)?function\s*(?:\w+)?\s*\((.*?)\)\s*\{'
+    )
+    NAMED_EXPORT_RE = re.compile(r'^\s*export\s+\{\s*(\w+)')
+    
+    for i, line in enumerate(lines):
         stripped = line.strip()
-        if not stripped or stripped.startswith('//') or stripped.startswith('/*') or stripped.startswith('*'):
+        if not stripped or stripped.startswith('//') or stripped.startswith('/*'):
             continue
-            
-        for pattern, _ in patterns:
-            match = re.match(pattern, stripped)
-            if match:
-                name = match.group(1)
-                params = match.group(2) if match.lastindex >= 2 else ""
-                
-                # Skip if name looks like a keyword or non-function
-                if name in ('if', 'else', 'for', 'while', 'switch', 'try', 'catch', 'return', 'import', 'export', 'from', 'const', 'let', 'var', 'class', 'function', 'async'):
-                    continue
-                    
-                # Clean up params
-                params = params.strip() if params else ""
-                
+        
+        # --- function declarations: function name(params) { ---
+        m = FUNC_DECL_RE.match(stripped)
+        if m:
+            name, params = m.group(1), m.group(2) or ""
+            if name not in keywords:
                 functions.append(Function(
                     name=name,
                     signature=f"({params})",
                     file=str(file_path),
-                    line=i,
-                    async_flag="async" in stripped
+                    line=i + 1,
+                    async_flag="async" in stripped,
                 ))
-                break
+                continue
+        
+        # --- export default function(params) { ---
+        m = EXPORT_DEFAULT_FUNC_RE.match(stripped)
+        if m:
+            params = m.group(1) or ""
+            functions.append(Function(
+                name='<default>',
+                signature=f"({params})",
+                file=str(file_path),
+                line=i + 1,
+                async_flag="async" in stripped,
+            ))
+            continue
+        
+        # --- export { name } ---
+        m = NAMED_EXPORT_RE.match(stripped)
+        if m:
+            name = m.group(1)
+            if name not in keywords:
+                functions.append(Function(
+                    name=name,
+                    signature="()",
+                    file=str(file_path),
+                    line=i + 1,
+                ))
+                continue
+        
+        # --- Class declarations: class Name { ... } or export class Name ---
+        # Handled via _extract_js_arrow_params:
+        #   const f = (x) => {         → block body
+        #   const f = async (x) => {   → block body
+        #   const f = (x) => expr       → expr body (single line)
+        #   const f = async () => {     → bare async
+        # Skips HOF callbacks (e.g. useMemo(() => {) where parens are unbalanced.
+        if '=>' in stripped:
+            left = stripped.split('=>', 1)[0] + '=>'
+            name, params, is_async = _extract_js_arrow_params(left)
+            if name and name not in keywords:
+                functions.append(Function(
+                    name=name,
+                    signature=f"({params or ''})",
+                    file=str(file_path),
+                    line=i + 1,
+                    async_flag=is_async,
+                ))
     
     return functions
 
 
 def extract_from_typescript(file_path: Path) -> List[Function]:
-    """Extract functions from TypeScript (similar to JS but with type annotations)."""
+    """Extract functions from TypeScript/TSX (JSX is a superset of JS; same extractor)."""
     return extract_from_javascript(file_path)
 
 
@@ -387,13 +479,14 @@ def extract_all(repo_path: Path, language: str) -> Blueprint:
     data_structures = []
     all_imports = []
     
-    ext_map = {
-        "python": ".py",
-        "javascript": ".js",
-        "typescript": ".ts",
+    # Extensions to walk per language — JSX/TSX are explicitly included
+    lang_exts = {
+        "python": {".py"},
+        "javascript": {".js", ".jsx"},
+        "typescript": {".ts", ".tsx"},
     }
     
-    ext = ext_map.get(language, ".py")
+    extensions = lang_exts.get(language, {".py"})
     
     extractors = {
         "python": (extract_from_python, extract_classes_from_python),
@@ -403,9 +496,9 @@ def extract_all(repo_path: Path, language: str) -> Blueprint:
     
     func_extractor, class_extractor = extractors.get(language, (extract_from_python, None))
     
-    for file_path in walk_source_files(repo_path, extensions={ext}):
+    for file_path in walk_source_files(repo_path, extensions=extensions):
         try:
-            # Extract imports for Python files
+            # Extract imports for Python files only
             if language == "python":
                 content = file_path.read_text()
                 file_imports = _extract_imports(content)
@@ -414,7 +507,7 @@ def extract_all(repo_path: Path, language: str) -> Blueprint:
             functions.extend(func_extractor(file_path))
             if class_extractor and language == "python":
                 data_structures.extend(class_extractor(file_path))
-        except Exception as e:
+        except Exception:
             # Skip files that can't be parsed
             continue
     
