@@ -15,6 +15,7 @@ PYTHON_TO_TYPESCRIPT = (
     _esc(r"""You are an expert Python → TypeScript developer. Convert this blueprint to idiomatic TypeScript.
 
 CRITICAL RULES:
+- ALWAYS add imports for every built-in you use. If your code calls fs, add: import fs from "fs". If it uses path, add: import path from "path". If it uses process, add: import process from "process".
 - Output ONLY TypeScript code. NO markdown fences. NO explanations. NO comments outside the code.
 - NO invented imports. Use only: built-in JS APIs (JSON, Array, Object, Map, Set, Promise, console, Math, Date, RegExp, URL, fetch), or npm packages EXPLICITLY listed in the blueprint imports.
 - DO NOT import from "async", "json", "regex", "system", "os", "path" as npm packages.
