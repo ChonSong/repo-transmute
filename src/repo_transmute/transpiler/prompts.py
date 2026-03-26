@@ -1,31 +1,145 @@
-"""Prompt templates for transpilation — includes full function bodies."""
+r"""Prompt templates for transpilation — includes full function bodies and few-shot examples."""
 
-PYTHON_TO_TYPESCRIPT_PROMPT = """You are an expert Python → TypeScript developer. Convert this blueprint to idiomatic TypeScript.
+PYTHON_TO_TYPESCRIPT_PROMPT = r"""You are an expert Python → TypeScript developer. Convert this blueprint to idiomatic TypeScript.
 
 CRITICAL RULES:
 - Output ONLY TypeScript code. NO markdown fences. NO explanations. NO comments outside the code.
-- NO invented imports. Use only: built-in JS APIs (JSON.parse/string, Array.from/map/filter/reduce, Object.keys/values/entries, Map, Set, Promise, console, Math, Date, RegExp, URL, fetch), or npm packages that are EXPLICITLY listed in the blueprint imports.
+- NO invented imports. Use only: built-in JS APIs (JSON, Array, Object, Map, Set, Promise, console, Math, Date, RegExp, URL, fetch), or npm packages that are EXPLICITLY listed in the blueprint imports.
 - DO NOT import from "async", "json", "regex", "system", "os", "path" as npm packages.
-- For file path operations use the browser/Node.js built-ins or explicit package names.
-- For async, use native Promise/async-await only — NOT a package named "async".
+- For Node.js built-ins (fs, path, process, Buffer), add explicit imports, e.g.:
+    import fs from "fs";
+    import path from "path";
+    import process from "process";
 - Convert Python docstrings to JSDoc format (/** */) on the line ABOVE the declaration.
-- For class methods: output ONLY the method signature + JSDoc. NO implementation body.
-- For standalone functions: output the full implementation translated to TypeScript.
+- For class methods: output the FULL implementation in TypeScript. NOT just a signature.
+- For standalone functions: output the FULL implementation in TypeScript.
 - NEVER include Python code or Python-like syntax in the output.
 - If unsure about an import, OMIT it rather than inventing it.
 
-Format for multi-file output:
-// filename: path/to/file.ts
-<content>
----FILE_SEPARATOR---
-// filename: path/to/file2.ts
-<content>
+FEW-SHOT EXAMPLES:
 
-Blueprint:
+=== EXAMPLE 1: Python class -> TypeScript class with full method bodies ===
+
+Blueprint source:
+# Data Structures:
+# Config (class)
+# Fields:
+#   host: str
+#   port: int
+# Methods:
+# # load
+# <doc>Load config from a JSON file.</doc>
+# def load(cls, path: Path) -> Config:
+#     with open(path) as f:
+#         data = json.load(f)
+#     return cls(host=data["host"], port=data["port"])
+# # save
+# def save(self, path: Path) -> None:
+#     with open(path, "w") as f:
+#         json.dump(self.__dict__, f)
+
+Expected output:
+""" + """// filename: src/Config.ts
+import fs from "fs";
+import path from "path";
+
+export interface ConfigData {
+  host: string;
+  port: number;
+}
+
+/**
+ * Application configuration loaded from a JSON file.
+ */
+export class Config implements ConfigData {
+  host: string;
+  port: number;
+
+  constructor(host: string, port: number) {
+    this.host = host;
+    this.port = port;
+  }
+
+  /**
+   * Load config from a JSON file.
+   */
+  static async load(filePath: string): Promise<Config> {
+    const content = await fs.promises.readFile(filePath, "utf-8");
+    const data = JSON.parse(content) as ConfigData;
+    return new Config(data.host, data.port);
+  }
+
+  /**
+   * Save config to a JSON file.
+   */
+  async save(filePath: string): Promise<void> {
+    const dir = path.dirname(filePath);
+    await fs.promises.mkdir(dir, { recursive: true });
+    await fs.promises.writeFile(filePath, JSON.stringify(this, null, 2), "utf-8");
+  }
+}
+=== END EXAMPLE ===
+
+=== EXAMPLE 2: Python standalone function -> TypeScript with full body ===
+
+Blueprint source:
+# Functions (grouped by module):
+## utils.py
+# # detect_image_mime
+# <doc>Detect MIME type from file magic bytes.</doc>
+# def detect_image_mime(raw: bytes) -> str | None:
+#     MAGIC = {b"\xff\xd8\xff": "image/jpeg", b"\x89PNG": "image/png"}
+#     for magic, mime in MAGIC.items():
+#         if raw.startswith(magic):
+#             return mime
+#     return None
+
+Expected output:
+""" + """// filename: src/utils.ts
+import fs from "fs";
+
+const MAGIC_BYTES: Record<string, string> = {
+  "\\xff\\xd8\\xff": "image/jpeg",
+  "\\x89PNG": "image/png",
+  "GIF87a": "image/gif",
+  "GIF89a": "image/gif",
+};
+
+/**
+ * Detect MIME type from file magic bytes.
+ */
+export async function detectImageMime(filePath: string): Promise<string | null> {
+  const buf = await fs.promises.readFile(filePath);
+  for (const [magic, mime] of Object.entries(MAGIC_BYTES)) {
+    if (buf.slice(0, magic.length).toString("binary") === magic) {
+      return mime;
+    }
+  }
+  return null;
+}
+=== END EXAMPLE ===
+
+=== EXAMPLE 3: Python from/import -> handled correctly ===
+
+Blueprint source:
+# Source imports (use as hints only, do NOT blindly import):
+#   from pathlib import Path
+#   import json
+
+Expected output:
+""" + """// filename: src/main.ts
+import fs from "fs";
+// Note: Path operations use string paths directly (no Path class import)
+// Note: json handled via global JSON object (no import needed)
+=== END EXAMPLE ===
+
+Now transpile the following blueprint to TypeScript:
+
+""" + """
 {blueprint_content}
 """
 
-PYTHON_TO_RUST_PROMPT = """You are an expert Python to Rust developer. Convert this blueprint to idiomatic Rust.
+PYTHON_TO_RUST_PROMPT = r"""You are an expert Python to Rust developer. Convert this blueprint to idiomatic Rust.
 
 CRITICAL RULES:
 - Output ONLY Rust code. NO markdown fences. NO explanations.
@@ -49,7 +163,7 @@ Blueprint:
 {blueprint_content}
 """
 
-PYTHON_TO_PYTHON_PROMPT = """You are an expert Python developer. Improve this Python blueprint with better patterns.
+PYTHON_TO_PYTHON_PROMPT = r"""You are an expert Python developer. Improve this Python blueprint with better patterns.
 
 CRITICAL RULES:
 - Output ONLY Python code. NO markdown fences. NO explanations.
@@ -69,7 +183,7 @@ Blueprint:
 {blueprint_content}
 """
 
-TYPESCRIPT_TO_TYPESCRIPT_PROMPT = """You are an expert TypeScript developer. Convert this blueprint to idiomatic TypeScript with improved types and patterns.
+TYPESCRIPT_TO_TYPESCRIPT_PROMPT = r"""You are an expert TypeScript developer. Convert this blueprint to idiomatic TypeScript with improved types and patterns.
 
 CRITICAL RULES:
 - Output ONLY TypeScript code. NO markdown fences. NO explanations.
@@ -91,7 +205,7 @@ Blueprint:
 {blueprint_content}
 """
 
-JAVASCRIPT_TO_TYPESCRIPT_PROMPT = """You are an expert JavaScript to TypeScript developer. Convert this blueprint to idiomatic TypeScript.
+JAVASCRIPT_TO_TYPESCRIPT_PROMPT = r"""You are an expert JavaScript to TypeScript developer. Convert this blueprint to idiomatic TypeScript.
 
 CRITICAL RULES:
 - Output ONLY TypeScript code. NO markdown fences. NO explanations.
@@ -112,7 +226,7 @@ Blueprint:
 {blueprint_content}
 """
 
-TSX_TEMPLATE = """You are an expert React/TypeScript developer. Convert this blueprint to idiomatic TSX/React components.
+TSX_TEMPLATE = r"""You are an expert React/TypeScript developer. Convert this blueprint to idiomatic TSX/React components.
 
 CRITICAL RULES:
 - Output ONLY TSX/TypeScript code. NO markdown fences. NO explanations.
@@ -139,7 +253,7 @@ def _format_function(f: dict) -> str:
     """Format a function for the prompt. Body already contains the full def line."""
     parts = [f"# {f['name']}"]
     if f.get("docstring"):
-        parts.append(f'"""{f["docstring"][:300]}"""')
+        parts.append(f'<doc>{f["docstring"][:300]}</doc>')
     if f.get("body"):
         parts.append(f["body"])
     return "\n".join(parts)
