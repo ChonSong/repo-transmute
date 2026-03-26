@@ -212,8 +212,10 @@ class TestReassembler:
         r = Reassembler(sample_chunks, Path("/tmp"))
         r.add_transpiled(0, "export function add(a: number, b: number): number { return a + b; }")
         combined = r.combine()
+        # Code is preserved (no chunk header anymore, just code)
         assert "add" in combined
-        assert "Chunk 0" in combined
+        # No chunk header comment in new format
+        assert "Chunk 0" not in combined
 
     def test_combine_respects_chunk_order(self, sample_chunks):
         """Dependency order: chunk 1 depends on chunk 0, so 0 should come first."""

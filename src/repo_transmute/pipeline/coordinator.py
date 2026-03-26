@@ -582,7 +582,7 @@ Requirements:
                     output_dir=output_dir
                 )
 
-                reassembler.add_transpiled(chunk_id, transpiled_code)
+                reassembler.add_transpiled(chunk_id, transpiled_code, file_paths=[f for f in chunk.files])
                 progress.status = "completed"
                 chunks_processed += 1
 

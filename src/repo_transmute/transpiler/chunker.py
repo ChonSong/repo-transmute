@@ -196,9 +196,19 @@ class Reassembler:
         self._chunk_ids_in_order = [c.id for c in sorted_chunks]
         self.base_path = base_path or Path.cwd()
         self.transpiled: Dict[int, str] = {}
+        self._chunk_file_paths: Dict[int, List[Path]] = {}
 
-    def add_transpiled(self, chunk_id: int, code: str) -> None:
+    def add_transpiled(self, chunk_id: int, code: str, file_paths: Optional[List[Path]] = None) -> None:
+        """Add transpiled code for a chunk.
+
+        Args:
+            chunk_id: The chunk ID
+            code: Transpiled code string
+            file_paths: Optional list of source file paths for filename markers
+        """
         self.transpiled[chunk_id] = code
+        if file_paths:
+            self._chunk_file_paths[chunk_id] = file_paths
 
     def _topological_sort(self) -> List[int]:
         if not self.transpiled:
@@ -217,7 +227,11 @@ class Reassembler:
         return sorted_ids
 
     def combine(self) -> str:
-        """Merge all transpiled chunks into a single string."""
+        """Merge all transpiled chunks into a single string.
+
+        Adds // filename: <relative_path> markers before each chunk's output
+        so write_files() can preserve directory structure.
+        """
         if not self.transpiled:
             return ""
         sorted_ids = self._topological_sort()
@@ -225,11 +239,22 @@ class Reassembler:
         for chunk_id in sorted_ids:
             chunk = self.chunks[chunk_id]
             code = self.transpiled.get(chunk_id, "")
-            if chunk.files:
-                names = ", ".join(f.name for f in chunk.files[:3])
-                if len(chunk.files) > 3:
-                    names += f" (+{len(chunk.files) - 3} more)"
-                parts.append(f"\n# ===== Chunk {chunk_id}: {names} =====\n")
+
+            # Only add chunk-level filename markers if add_transpiled was called with file_paths.
+            # This preserves backward compat: tests calling add_transpiled(code) without file_paths
+            # get no chunk-level markers, and write_files falls back to func/class detection.
+            if chunk_id in self._chunk_file_paths:
+                for src_file in self._chunk_file_paths[chunk_id]:
+                    try:
+                        rel = src_file.relative_to(self.base_path)
+                    except ValueError:
+                        rel = src_file
+                    ext = rel.suffix
+                    ts_ext = ".ts" if ext in (".py", ".pyw") else ext if ext in (".ts", ".tsx", ".js", ".jsx") else ".ts"
+                    ts_rel = rel.with_suffix(ts_ext)
+                    parts.append(f"// filename: {ts_rel}")
+                parts.append("")
+
             parts.append(code)
         return "\n".join(parts)
 
