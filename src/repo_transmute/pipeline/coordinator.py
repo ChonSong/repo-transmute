@@ -1,5 +1,6 @@
 """Pipeline coordinator for RepoTransmute - multi-pass transpilation with refinement."""
 
+import ast
 import re
 import subprocess
 import tempfile
@@ -239,7 +240,7 @@ def _generate_js_tests(chunk_files: List[Path]) -> str:
 
 
 def _generate_python_tests(chunk_files: List[Path]) -> str:
-    """Generate pytest tests for Python."""
+    """Generate pytest tests for Python using AST to extract classes, methods, and functions."""
     test_lines = [
         '"""Auto-generated tests for transpiled module."""',
         "import pytest",
@@ -255,31 +256,61 @@ def _generate_python_tests(chunk_files: List[Path]) -> str:
         modules[module_name].append(f)
 
     for module_name, files in modules.items():
-        classes = set()
-        functions = set()
+        classes_methods: dict[str, list[str]] = {}
+        standalone_functions: list[str] = []
 
         for file in files:
-            content = file.read_text()
-            classes.update(re.findall(r"^class\s+(\w+)", content, re.MULTILINE))
-            functions.update(re.findall(r"^(?:async\s+)?def\s+(\w+)\s*\(", content, re.MULTILINE))
+            try:
+                content = file.read_text()
+                tree = ast.parse(content)
+                for node in ast.iter_child_nodes(tree):
+                    if isinstance(node, ast.ClassDef):
+                        methods = []
+                        for item in ast.iter_child_nodes(node):
+                            if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                                methods.append(item.name)
+                        if methods:
+                            classes_methods[node.name] = methods
+                    elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                        if not node.name.startswith("_"):
+                            standalone_functions.append(node.name)
+            except SyntaxError:
+                # Fallback to regex for files that can't be parsed
+                content = file.read_text()
+                classes_raw = re.findall(r"^class\s+(\w+)", content, re.MULTILINE)
+                for cls in classes_raw:
+                    methods_raw = re.findall(
+                        r"^    def (\w+)\(self[,)]",
+                        content,
+                        re.MULTILINE
+                    )
+                    if methods_raw:
+                        classes_methods[cls] = methods_raw
+                standalone_functions.extend(
+                    f for f in re.findall(r"^(?:async\s+)?def\s+(\w+)\s*\(", content, re.MULTILINE)
+                    if not f.startswith("_")
+                )
 
-        if classes:
-            test_lines.append(f"class Test{module_name.title()}:")
-            for cls in classes:
-                test_lines.append(f"    def test_{cls.lower()}_instantiation(self):")
-                test_lines.append(f"        # TODO: Test {cls}")
-                test_lines.append(f"        assert True")
-                test_lines.append("")
+        for cls, methods in classes_methods.items():
+            test_lines.append(f"class Test{cls}:")
+            test_lines.append(f"    def test_{cls.lower()}_instantiation(self):")
+            test_lines.append(f"        # TODO: Test {cls} instantiation")
+            test_lines.append(f"        assert True")
+            test_lines.append("")
+            for method in methods:
+                if not method.startswith("_"):
+                    test_lines.append(f"    def test_{method}(self):")
+                    test_lines.append(f"        # TODO: Test {cls}.{method}")
+                    test_lines.append(f"        assert True")
+                    test_lines.append("")
 
-        for func in functions:
-            if not func.startswith("_"):
-                test_lines.append(f"def test_{func}():")
-                test_lines.append(f"    # TODO: Test {func}")
-                test_lines.append("    assert True")
-                test_lines.append("")
+        for func in standalone_functions:
+            test_lines.append(f"def test_{func}():")
+            test_lines.append(f"    # TODO: Test {func}")
+            test_lines.append("    assert True")
+            test_lines.append("")
 
     return "\n".join(test_lines)
-
 
 def _generate_rust_tests(chunk_files: List[Path]) -> str:
     """Generate Rust tests."""
