@@ -629,3 +629,41 @@ class TestPipelineCoordinatorWriteFiles:
             assert "rs" in captured_exts, f"expected 'rs' extension, got {captured_exts}"
         finally:
             Reassembler.write_files = original
+    def test_transpile_all_chunks_progress_callback_invoked(self, tmp_path):
+        from repo_transmute.transpiler.chunker import Chunk
+        chunk_a = Chunk(id=0, files=[], imports=[], exports=[], dependencies=[])
+        chunk_b = Chunk(id=1, files=[], imports=[], exports=[], dependencies=[])
+
+        coord = PipelineCoordinator(target_lang='rust', max_passes=1)
+        coord.transpiler.transpile = lambda path, target, output_dir=None: '// filename: lib.rs'
+
+        with patch('repo_transmute.pipeline.coordinator.chunk_repository') as mock_cr:
+            mock_cr.return_value = [chunk_a, chunk_b]
+            calls = []
+            coord.transpile_all_chunks(
+                repo_path=tmp_path,
+                language='python',
+                output_dir=tmp_path / 'out',
+                progress_callback=lambda idx, total, msg: calls.append((idx, total, msg))
+            )
+            assert len(calls) == 2
+            assert calls[0] == (1, 2, 'Processing chunk 1/2')
+            assert calls[1] == (2, 2, 'Processing chunk 2/2')
+
+    def test_run_full_pipeline_accepts_progress_callback(self, tmp_path):
+        coord = PipelineCoordinator(target_lang='rust', max_passes=1)
+        with patch.object(coord, 'transpile_all_chunks') as mock_tac,              patch.object(coord, 'validator') as mock_validator,              patch('repo_transmute.pipeline.coordinator.clone_repo') as mock_clone:
+            repo_cache = tmp_path / 'cache' / 'owner__repo'
+            mock_clone.return_value = repo_cache
+            repo_cache.mkdir(parents=True)
+            mock_tac.return_value = ('', 0, 0, [])
+            mock_validator.generate_report.return_value = MagicMock()
+            result = coord.run_full_pipeline(
+                repo='owner/repo',
+                cache_dir=tmp_path / 'cache',
+                output_dir=tmp_path / 'out',
+                progress_callback=lambda idx, total, msg: None,
+            )
+            mock_tac.assert_called_once()
+            _, kwargs = mock_tac.call_args
+            assert 'progress_callback' in kwargs

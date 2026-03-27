@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple, Dict, Any
 
 import yaml
+from tqdm import tqdm
 
 from repo_transmute.blueprint import Blueprint, load_blueprint
 from repo_transmute.blueprint.extractor import extract_all
@@ -535,7 +536,7 @@ Requirements:
         language: str,
         output_dir: Optional[Path] = None,
         progress_callback: Optional[callable] = None
-    ) -> Tuple[str, int, int]:
+    ) -> Tuple[str, int, int, List[str]]:
         """Transpile all chunks from a repository.
 
         Args:
@@ -545,7 +546,7 @@ Requirements:
             progress_callback: Optional callback for progress updates
 
         Returns:
-            Tuple of (combined_transpiled_code, chunks_processed, total_chunks)
+            Tuple of (combined_transpiled_code, chunks_processed, total_chunks, written_paths)
         """
         print(f"Chunking repository: {repo_path.name}")
 
@@ -558,7 +559,7 @@ Requirements:
         chunk_order = reassembler.get_chunk_order()
         chunks_processed = 0
 
-        for idx, chunk_id in enumerate(chunk_order):
+        for idx, chunk_id in enumerate(tqdm(chunk_order, desc="Transpiling chunks", unit="chunk")):
             chunk = chunks[chunk_id]
 
             progress = ChunkProgress(
@@ -572,7 +573,7 @@ Requirements:
             if progress_callback:
                 progress_callback(idx + 1, total_chunks, f"Processing chunk {chunk_id + 1}/{total_chunks}")
 
-            print(f"Transpiling chunk {idx + 1}/{total_chunks} (id={chunk_id}): {len(chunk.files)} files — {[f.name for f in chunk.files]}")
+            print(f"  Transpiling chunk {idx + 1}/{total_chunks} (id={chunk_id}): {len(chunk.files)} files — {[f.name for f in chunk.files]}")
 
             try:
                 transpiled_code = self.transpile_chunk(
@@ -586,12 +587,9 @@ Requirements:
                 progress.status = "completed"
                 chunks_processed += 1
 
-                print(f"  ✓ Chunk {idx + 1} completed ({len(transpiled_code)} chars)")
-
             except Exception as e:
                 progress.status = "failed"
                 progress.error = str(e)
-                print(f"  ✗ Chunk {idx + 1} failed: {e}")
                 continue
 
         # Combine all transpiled chunks
@@ -613,6 +611,7 @@ Requirements:
         cache_dir: Path = DEFAULT_CACHE_DIR,
         output_dir: Path = DEFAULT_OUTPUT_DIR,
         chunk_dir: Optional[Path] = None,
+        progress_callback: Optional[callable] = None,
     ) -> PipelineResult:
         """Run the full transpilation pipeline.
 
@@ -621,6 +620,7 @@ Requirements:
             cache_dir: Directory for cloned repos
             output_dir: Directory for blueprints
             chunk_dir: Optional directory for chunked files (if pre-chunked)
+            progress_callback: Optional callback for progress updates (idx, total, message)
 
         Returns:
             PipelineResult with transpiled code, tests, and validation
@@ -649,7 +649,8 @@ Requirements:
             transpiled_code, chunks_processed, total_chunks, written_paths = self.transpile_all_chunks(
                 repo_path=repo_path,
                 language=language,
-                output_dir=output_dir
+                output_dir=output_dir,
+                progress_callback=progress_callback
             )
 
             # Step 3: Generate tests (from combined output)
