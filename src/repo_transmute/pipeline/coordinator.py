@@ -595,6 +595,9 @@ Requirements:
         # Combine all transpiled chunks
         combined_code = reassembler.combine()
 
+        # Resolve cross-chunk imports so internal references point to the right files
+        resolved_code = reassembler.resolve_imports()
+
         print(f"\nProcessed {chunks_processed}/{total_chunks} chunks successfully")
 
         written_files = reassembler.write_files(
@@ -603,7 +606,7 @@ Requirements:
         )
         written_paths = [str(p) for p in written_files.values()]
 
-        return combined_code, chunks_processed, total_chunks, written_paths
+        return resolved_code, chunks_processed, total_chunks, written_paths
 
     def run_full_pipeline(
         self,

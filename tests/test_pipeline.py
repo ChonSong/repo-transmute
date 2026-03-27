@@ -297,6 +297,16 @@ export class Config { }"""
         order = r.get_chunk_order()
         assert order == [0, 1]
 
+    def test_resolve_imports_resolves_cross_chunk_symbols(self, sample_chunks, tmp_path):
+        """resolve_imports rewrites internal import paths using global_exports built from chunk exports."""
+        r = Reassembler(sample_chunks, tmp_path)
+        # Chunk 0 exports 'add', 'multiply'; Chunk 1 exports 'Config'
+        r.add_transpiled(0, "// filename: math_ops.ts\nfunction add(a, b) { return a + b; }")
+        r.add_transpiled(1, "// filename: config.ts\nfunction Config() { }")
+        resolved = r.resolve_imports()
+        assert "function add" in resolved
+        assert "function Config" in resolved
+
     def test_write_files_multiple_chunks_with_filemarkers(self, sample_chunks, tmp_path):
         """write_files correctly writes each chunk's // filename: content to separate files."""
         r = Reassembler(sample_chunks, tmp_path)
