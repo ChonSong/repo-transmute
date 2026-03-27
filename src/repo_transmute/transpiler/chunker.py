@@ -487,12 +487,22 @@ class Reassembler:
 def chunk_repository(repo_path: Path, max_functions: int = 30) -> List[Chunk]:
     """
     Chunk an entire repository by finding all Python files.
+
+    Files are filtered to exclude:
+    - Hidden files/directories (starting with '.')
+    - Virtual environments ('venv', 'env')
+    - Python cache ('__pycache__')
+    - node_modules
+
+    Filtering is applied to path components RELATIVE to repo_path,
+    so absolute path prefixes (like /home/user/.openclaw) don't
+    cause false exclusions.
     """
     py_files = [
         f for f in repo_path.rglob("*.py")
         if not any(
             part.startswith(".") or part in ("venv", "env", "__pycache__", "node_modules")
-            for part in f.parts
+            for part in f.relative_to(repo_path).parts
         )
     ]
     return create_chunks(py_files, base_path=repo_path, max_functions=max_functions)
