@@ -667,3 +667,78 @@ class TestPipelineCoordinatorWriteFiles:
             mock_tac.assert_called_once()
             _, kwargs = mock_tac.call_args
             assert 'progress_callback' in kwargs
+
+    def test_pipeline_cli_passes_max_functions_to_coordinator(self, tmp_path):
+        """Verify --max-functions / -f CLI option is passed to PipelineCoordinator."""
+        from unittest.mock import patch, MagicMock
+        from click.testing import CliRunner
+        from repo_transmute.cli import pipeline
+
+        coord_init_kwargs = {}
+        original_init = PipelineCoordinator.__init__
+
+        def capturing_init(self, *args, **kwargs):
+            coord_init_kwargs.update(kwargs)
+            return original_init(self, *args, **kwargs)
+
+        with patch.object(PipelineCoordinator, '__init__', capturing_init), \
+             patch.object(PipelineCoordinator, 'run_full_pipeline') as mock_run:
+            mock_run.return_value = MagicMock(success=False, error='')
+            runner = CliRunner()
+            result = runner.invoke(pipeline, [
+                'owner/repo',
+                '--max-functions', '15',
+                '-c', str(tmp_path / 'cache'),
+                '-o', str(tmp_path / 'out'),
+            ])
+            assert 'max_functions_per_chunk' in coord_init_kwargs
+            assert coord_init_kwargs['max_functions_per_chunk'] == 15
+
+    def test_pipeline_cli_max_functions_short_option(self, tmp_path):
+        """Verify -f short option works for --max-functions."""
+        from unittest.mock import patch, MagicMock
+        from click.testing import CliRunner
+        from repo_transmute.cli import pipeline
+
+        coord_init_kwargs = {}
+        original_init = PipelineCoordinator.__init__
+
+        def capturing_init(self, *args, **kwargs):
+            coord_init_kwargs.update(kwargs)
+            return original_init(self, *args, **kwargs)
+
+        with patch.object(PipelineCoordinator, '__init__', capturing_init), \
+             patch.object(PipelineCoordinator, 'run_full_pipeline') as mock_run:
+            mock_run.return_value = MagicMock(success=False, error='')
+            runner = CliRunner()
+            result = runner.invoke(pipeline, [
+                'owner/repo',
+                '-f', '7',
+                '-c', str(tmp_path / 'cache'),
+                '-o', str(tmp_path / 'out'),
+            ])
+            assert coord_init_kwargs.get('max_functions_per_chunk') == 7
+
+    def test_pipeline_cli_default_max_functions(self, tmp_path):
+        """Verify default max_functions_per_chunk is 30 when not specified."""
+        from unittest.mock import patch, MagicMock
+        from click.testing import CliRunner
+        from repo_transmute.cli import pipeline
+
+        coord_init_kwargs = {}
+        original_init = PipelineCoordinator.__init__
+
+        def capturing_init(self, *args, **kwargs):
+            coord_init_kwargs.update(kwargs)
+            return original_init(self, *args, **kwargs)
+
+        with patch.object(PipelineCoordinator, '__init__', capturing_init), \
+             patch.object(PipelineCoordinator, 'run_full_pipeline') as mock_run:
+            mock_run.return_value = MagicMock(success=False, error='')
+            runner = CliRunner()
+            result = runner.invoke(pipeline, [
+                'owner/repo',
+                '-c', str(tmp_path / 'cache'),
+                '-o', str(tmp_path / 'out'),
+            ])
+            assert coord_init_kwargs.get('max_functions_per_chunk') == 30

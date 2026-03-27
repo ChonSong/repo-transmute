@@ -132,7 +132,8 @@ def ingest(repo: str, output_dir: Path, cache_dir: Path, target: str):
 @click.option("--cache-dir", "-c", type=click.Path(path_type=Path), default=DEFAULT_CACHE_DIR, help="Cache directory for cloned repos")
 @click.option("--model", "-m", default="MiniMax-M2.7", help="LLM model to use")
 @click.option("--max-passes", "-p", default=2, help="Maximum refinement passes")
-def pipeline(repo: str, target: str, output_dir: Path, cache_dir: Path, model: str, max_passes: int):
+@click.option("--max-functions", "-f", default=30, type=int, help="Maximum functions per chunk")
+def pipeline(repo: str, target: str, output_dir: Path, cache_dir: Path, model: str, max_passes: int, max_functions: int):
     """Run full pipeline: ingest -> transpile -> test -> validate.
     
     Example:
@@ -147,11 +148,15 @@ def pipeline(repo: str, target: str, output_dir: Path, cache_dir: Path, model: s
         return
     
     click.echo(f"Starting full pipeline for {repo}...")
-    click.echo(f"Target: {target} | Max passes: {max_passes}")
+    click.echo(f"Target: {target} | Max passes: {max_passes} | Max functions/chunk: {max_functions}")
     click.echo("="*50)
     
     # Initialize coordinator
-    coordinator = PipelineCoordinator(target_lang=target, max_passes=max_passes)
+    coordinator = PipelineCoordinator(
+        target_lang=target,
+        max_passes=max_passes,
+        max_functions_per_chunk=max_functions
+    )
     
     # Run pipeline
     result = coordinator.run_full_pipeline(
@@ -204,7 +209,7 @@ def pipeline(repo: str, target: str, output_dir: Path, cache_dir: Path, model: s
 @click.argument("repo", default="")
 @click.option("--cache-dir", "-c", type=click.Path(path_type=Path), default=DEFAULT_CACHE_DIR, help="Cache directory for cloned repos")
 @click.option("--output-dir", "-o", type=click.Path(path_type=Path), default=DEFAULT_OUTPUT_DIR, help="Output directory for chunks")
-@click.option("--chunk-size", "-s", default=20, help="Files per chunk")
+@click.option("--chunk-size", "-s", default=20, help="Maximum functions per chunk (for backward compat)")
 def chunk(repo: str, cache_dir: Path, output_dir: Path, chunk_size: int = 20):
     """Chunk repository into smaller pieces for processing.
     
@@ -231,9 +236,9 @@ def chunk(repo: str, cache_dir: Path, output_dir: Path, chunk_size: int = 20):
             click.echo(f"Error cloning repo: {e}", err=True)
             return
     
-    click.echo(f"Chunking {repo} (chunk size: {chunk_size})...")
+    click.echo(f"Chunking {repo} (max_functions={chunk_size})...")
     
-    chunks = chunk_repository(repo_path, chunk_size=chunk_size)
+    chunks = chunk_repository(repo_path, max_functions=chunk_size)
     
     click.echo(f"\nCreated {len(chunks)} chunks:")
     
