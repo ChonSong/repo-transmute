@@ -752,3 +752,145 @@ class TestPipelineCoordinatorWriteFiles:
                 '-o', str(tmp_path / 'out'),
             ])
             assert coord_init_kwargs.get('max_functions_per_chunk') == 30
+
+
+# ---------------------------------------------------------------------------
+# CLI — transpile command individual chunk support
+# ---------------------------------------------------------------------------
+
+class TestTranspileCommandChunkMode:
+    """Tests for repo-transmute transpile --repo owner/repo --chunk-id N."""
+
+    def test_transpile_chunk_mode_requires_chunk_id_with_repo(self, tmp_path):
+        """--repo without --chunk-id must error."""
+        from click.testing import CliRunner
+        from repo_transmute.cli import transpile
+
+        runner = CliRunner()
+        with patch("repo_transmute.cli.clone_repo"):
+            result = runner.invoke(transpile, ["--repo", "owner/repo"])
+            assert result.exit_code != 0
+            assert "chunk-id" in result.output.lower()
+
+    def test_transpile_chunk_mode_transpiles_correct_chunk(self, tmp_path):
+        """transpile --repo X --chunk-id Y calls transpile_chunk with chunks[Y]."""
+        from click.testing import CliRunner
+        from repo_transmute.cli import transpile, _transpile_single_chunk
+
+        cache = tmp_path / "cache"
+        cache.mkdir()
+        cached = cache / "owner__repo"
+        cached.mkdir()
+        (cached / "mod.py").write_text("def f(): pass\n")
+
+        captured = {}
+
+        def fake_transpile_chunk(chunk, repo_path, language, output_dir=None):
+            captured["chunk_id"] = chunk.id
+            captured["num_files"] = len(chunk.files)
+            return "// transpiled"
+
+        coord = PipelineCoordinator(target_lang="typescript", max_passes=1)
+        with patch.object(coord, "transpile_chunk", fake_transpile_chunk), \
+             patch("repo_transmute.cli.PipelineCoordinator", return_value=coord):
+            _transpile_single_chunk(
+                repo="owner/repo",
+                chunk_id=0,
+                target="typescript",
+                output_dir=tmp_path / "out",
+                cache_dir=cache,
+                model="MiniMax-M2.7",
+                max_functions=30,
+            )
+
+        assert captured.get("chunk_id") == 0
+        assert captured.get("num_files") == 1
+
+    def test_transpile_chunk_mode_invalid_chunk_id_errors(self, tmp_path):
+        """chunk-id out of range must error with the valid range."""
+        from click.testing import CliRunner
+        from repo_transmute.cli import transpile
+
+        cache = tmp_path / "cache"
+        cache.mkdir()
+        cached = cache / "owner__repo"
+        cached.mkdir()
+        (cached / "mod.py").write_text("def f(): pass\n")
+
+        runner = CliRunner()
+        with patch("repo_transmute.cli.PipelineCoordinator") as MockCoord:
+            MockCoord.return_value.transpile_chunk = lambda *a, **kw: "// out"
+            result = runner.invoke(transpile, [
+                "--repo", "owner/repo", "--chunk-id", "0",
+                "--cache-dir", str(cache),
+                "--output-dir", str(tmp_path / "out"),
+            ])
+            # chunk-id 0 should work (only 1 chunk exists)
+            assert result.exit_code == 0, f"chunk 0 should succeed: {result.output}"
+
+        # Out of range
+        with patch("repo_transmute.cli.PipelineCoordinator") as MockCoord:
+            MockCoord.return_value.transpile_chunk = lambda *a, **kw: "// out"
+            result = runner.invoke(transpile, [
+                "--repo", "owner/repo", "--chunk-id", "99",
+                "--cache-dir", str(cache),
+                "--output-dir", str(tmp_path / "out"),
+            ])
+            assert result.exit_code != 0, f"chunk 99 should fail: {result.output}"
+            assert "out of range" in result.output.lower()
+
+
+    def test_transpile_chunk_mode_saves_output_file(self, tmp_path):
+        """When output_dir is set, transpiled code is written to chunkNNN.ext."""
+        from repo_transmute.cli import _transpile_single_chunk
+
+        cache = tmp_path / "cache"
+        cache.mkdir()
+        cached = cache / "owner__repo"
+        cached.mkdir()
+        (cached / "mod.py").write_text("def f(): pass\n")
+
+        out_dir = tmp_path / "out"
+
+        coord = PipelineCoordinator(target_lang="typescript", max_passes=1)
+        coord.transpile_chunk = lambda *a, **kw: "// filename: test.ts\nexport function f(): void { }"
+        with patch("repo_transmute.cli.PipelineCoordinator", return_value=coord):
+            _transpile_single_chunk(
+                repo="owner/repo",
+                chunk_id=0,
+                target="typescript",
+                output_dir=out_dir,
+                cache_dir=cache,
+                model="MiniMax-M2.7",
+                max_functions=30,
+            )
+
+        # File is saved
+        saved = list(out_dir.glob("chunk000.ts"))
+        assert len(saved) == 1
+        assert "export function f" in saved[0].read_text()
+
+    def test_transpile_blueprint_mode_still_works(self, tmp_path):
+        """transpile <blueprint.yaml> (no --repo) should call transpile_with_llm."""
+        from click.testing import CliRunner
+        from repo_transmute.cli import transpile
+
+        blueprint_file = tmp_path / "bp.yaml"
+        blueprint_file.write_text("""
+version: '1.0'
+source:
+  repo: test
+  language: python
+blueprint:
+  functions:
+    - name: hello
+      signature: () -> str
+      file: hello.py
+      line: 1
+""")
+
+        with patch("repo_transmute.cli.transpile_with_llm", return_value="// hello") as mock_llm:
+            runner = CliRunner()
+            result = runner.invoke(transpile, [str(blueprint_file)])
+            assert result.exit_code == 0
+            mock_llm.assert_called_once()

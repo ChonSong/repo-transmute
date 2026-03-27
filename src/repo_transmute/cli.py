@@ -27,6 +27,28 @@ DEFAULT_OUTPUT_DIR = Path("./data/blueprints")
 DEFAULT_RUST_DIR = Path("./data/outputs")
 
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _target_ext(target: str) -> str:
+    """Return the canonical file extension for a target language name."""
+    return {
+        "typescript": "ts",
+        "ts": "ts",
+        "tsx": "ts",
+        "javascript": "js",
+        "js": "js",
+        "jsx": "js",
+        "rust": "rs",
+        "python": "py",
+    }.get(target.lower(), "txt")
+
+
+# ---------------------------------------------------------------------------
+# CLI group
+# ---------------------------------------------------------------------------
+
 @click.group()
 @click.version_option(version="0.1.0")
 def cli():
@@ -193,11 +215,12 @@ def pipeline(repo: str, target: str, output_dir: Path, cache_dir: Path, model: s
         output_dir.mkdir(parents=True, exist_ok=True)
         owner, name = repo.split("/", 1)
         
-        code_file = output_dir / f"{name}.{target[:3]}"
+        ext = _target_ext(target)
+        code_file = output_dir / f"{name}.{ext}"
         code_file.write_text(result.transpiled_code)
         click.echo(f"\nSaved transpiled code to {code_file}")
         
-        test_file = output_dir / f"{name}.test.{target[:3]}"
+        test_file = output_dir / f"{name}.test.{ext}"
         test_file.write_text(result.tests)
         click.echo(f"Saved tests to {test_file}")
         
@@ -329,17 +352,59 @@ def deps(repo: str, cache_dir: Path, output: Path):
 
 
 @cli.command()
-@click.argument("blueprint")
+@click.argument("blueprint", required=False)
 @click.option("--target", "-t", default=None, help="Target language (auto-detect from compatibility if not specified)")
 @click.option("--output-dir", "-o", type=click.Path(path_type=Path), default=DEFAULT_RUST_DIR, help="Output directory for transpiled code")
 @click.option("--model", "-m", default="MiniMax-M2.7", help="LLM model to use")
-def transpile(blueprint: str, target: str, output_dir: Path, model: str):
-    """Transpile a blueprint to target language."""
-    blueprint_path = Path(blueprint)
-    
-    if not blueprint_path.exists():
-        click.echo(f"Error: Blueprint file not found: {blueprint}", err=True)
+@click.option("--repo", "-r", default=None, help="Cached repo path or 'owner/repo' to use chunk mode")
+@click.option("--chunk-id", "-i", "chunk_id", type=int, default=None, help="Chunk ID to transpile (0-based, requires --repo)")
+@click.option("--cache-dir", "-c", type=click.Path(path_type=Path), default=DEFAULT_CACHE_DIR, help="Cache directory for cloned repos")
+@click.option("--max-functions", "-f", default=30, type=int, help="Maximum functions per chunk (chunk mode only)")
+def transpile(
+    blueprint: str,
+    target: str,
+    output_dir: Path,
+    model: str,
+    repo: str,
+    chunk_id: int,
+    cache_dir: Path,
+    max_functions: int,
+):
+    """Transpile a blueprint file OR a single chunk from a cached repository.
+
+    Blueprint mode (transpile a saved YAML blueprint):
+        repo-transmute transpile blueprints/HKUDS__nanobot.yaml -t typescript
+
+    Chunk mode (transpile one chunk from a cached repo):
+        repo-transmute transpile --repo HKUDS__nanobot --chunk-id 0 -t typescript
+        repo-transmute transpile -r ChonSong/repo-transmute --chunk-id 3
+    """
+    # --- Chunk mode ---
+    if repo is not None or chunk_id is not None:
+        if chunk_id is None:
+            raise click.ClickException("--chunk-id is required when using --repo")
+        _transpile_single_chunk(
+            repo=repo,
+            chunk_id=chunk_id,
+            target=target or "typescript",
+            output_dir=output_dir,
+            cache_dir=cache_dir,
+            model=model,
+            max_functions=max_functions,
+        )
         return
+
+    # --- Blueprint mode ---
+    if not blueprint:
+        raise click.ClickException(
+            "Either a blueprint path or --repo is required.\n"
+            "  Blueprint: repo-transmute transpile blueprints/repo.yaml -t typescript\n"
+            "  Chunk:     repo-transmute transpile --repo owner/repo --chunk-id 0"
+        )
+
+    blueprint_path = Path(blueprint)
+    if not blueprint_path.exists():
+        raise click.ClickException(f"Blueprint file not found: {blueprint}")
     
     if not target:
         bp = load_blueprint(blueprint_path)
@@ -357,10 +422,90 @@ def transpile(blueprint: str, target: str, output_dir: Path, model: str):
             click.echo(click.style(f"\nSaved to {output_dir}/", fg="green"))
             
     except Exception as e:
-        click.echo(f"Error transpiling: {e}", err=True)
-        return
+        raise click.ClickException(f"Transpilation failed: {e}")
     
     click.echo(click.style("Done!", fg="green"))
+
+
+def _transpile_single_chunk(
+    repo: str,
+    chunk_id: int,
+    target: str,
+    output_dir: Path,
+    cache_dir: Path,
+    model: str,
+    max_functions: int,
+):
+    """Transpile one chunk from a cached repository (not a Click command)."""
+    # Resolve repo path
+    if "/" in repo:
+        owner, name = repo.split("/", 1)
+        repo_path = cache_dir / f"{owner}__{name}"
+    else:
+        # Short name — look for any cached repo whose folder name ends with the given string
+        candidates = list(cache_dir.glob(f"*{repo}*"))
+        if not candidates:
+            raise click.ClickException(
+                f"No cached repo matching '{repo}' found in {cache_dir}.\n"
+                "Run 'repo-transmute ingest owner/repo' first to cache it."
+            )
+        if len(candidates) > 1:
+            lines = [f"Ambiguous repo '{repo}'. Matches:"]
+            lines.extend(f"  {c.name}" for c in candidates)
+            raise click.ClickException("\n".join(lines))
+        repo_path = candidates[0]
+
+    if not repo_path.exists():
+        raise click.ClickException(
+            f"Cached repo not found at {repo_path}.\n"
+            "Run 'repo-transmute ingest owner/repo' first to cache it."
+        )
+
+    # Detect language and create chunks
+    language = detect_language(repo_path)
+    click.echo(f"Detected language: {language}")
+
+    chunks = chunk_repository(repo_path, max_functions=max_functions)
+    total = len(chunks)
+
+    if chunk_id < 0 or chunk_id >= total:
+        raise click.ClickException(
+            f"chunk {chunk_id} out of range. Available: 0–{total - 1}"
+        )
+
+    chunk = chunks[chunk_id]
+    click.echo(f"\nChunk {chunk_id}/{total - 1}: {len(chunk.files)} files")
+    for f in chunk.files:
+        click.echo(f"  - {f.relative_to(repo_path)}")
+
+    coordinator = PipelineCoordinator(
+        target_lang=target,
+        max_passes=1,
+        max_functions_per_chunk=max_functions,
+        model=model,
+    )
+
+    click.echo(f"\nTranspiling (target={target})...")
+    try:
+        result = coordinator.transpile_chunk(
+            chunk=chunk,
+            repo_path=repo_path,
+            language=language,
+            output_dir=output_dir,
+        )
+    except Exception as e:
+        raise click.ClickException(f"Transpile failed: {e}")
+
+    click.echo("\n--- Transpiled Code ---")
+    click.echo(result)
+    click.echo("--- End ---\n")
+
+    if output_dir:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        suffix = _target_ext(target)
+        out_file = output_dir / f"chunk{chunk_id:03d}.{suffix}"
+        out_file.write_text(result)
+        click.echo(click.style(f"Saved → {out_file}", fg="green"))
 
 
 @cli.command()
