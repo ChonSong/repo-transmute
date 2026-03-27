@@ -163,8 +163,15 @@ def pipeline(repo: str, target: str, output_dir: Path, cache_dir: Path, model: s
     if result.success:
         click.echo(click.style("\n✅ Pipeline completed successfully!", fg="green"))
         click.echo(f"Passes run: {result.passes_run}")
+        click.echo(f"Chunks processed: {result.chunks_processed}/{result.total_chunks}")
         
-        if result.transpiled_code:
+        if result.files_written:
+            click.echo(f"Files written: {len(result.files_written)}")
+            for path in result.files_written[:10]:
+                click.echo(f"  - {path}")
+            if len(result.files_written) > 10:
+                click.echo(f"  ... and {len(result.files_written) - 10} more")
+        elif result.transpiled_code:
             click.echo("\nTranspiled code (first 500 chars):")
             click.echo(result.transpiled_code[:500])
         
