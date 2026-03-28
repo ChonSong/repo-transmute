@@ -17,6 +17,19 @@ IMPORT_REGEXES = [
     # require('Y') / require("Y")
     re.compile(r"require\s*\(\s*['\"]([^'\"]+)['\"]\s*\)"),
 ]
+# Regex patterns for various import/export syntaxes
+IMPORT_REGEXES = [
+    # Named/default imports: import X from 'Y' / import { X } from 'Y'
+    re.compile(r"import\s+(?:\{[^}]+\}|[\w]+)\s+from\s+['\"]([^'\"]+)['\"]"),
+    # Wildcard namespace import: import * as X from 'Y'
+    re.compile(r"import\s+\*\s+as\s+[\w]+\s+from\s+['\"]([^'\"]+)['\"]"),
+    # Dynamic imports: import('Y') / import("Y")
+    re.compile(r"import\s*\(\s*['\"]([^'\"]+)['\"]\s*\)"),
+    # Re-exports: export from 'Y' / export { X } from 'Y' / export * from 'Y'
+    re.compile(r"export\s+(?:\{[^}]+\}|\*)\s+from\s+['\"]([^'\"]+)['\"]"),
+    # CommonJS require: require('Y')
+    re.compile(r"require\s*\(\s*['\"]([^'\"]+)['\"]\s*\)"),
+]
 
 
 def parse_imports(file_path: Path) -> List[str]:
