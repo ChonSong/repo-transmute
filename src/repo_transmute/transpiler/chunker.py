@@ -398,7 +398,16 @@ class Reassembler:
         resolved = self._resolve_imports_in_text(combined, global_exports)
         return resolved
 
-    def _resolve_imports_in_text(self, text: str, global_exports: Dict[str, str]) -> str:
+    # Pattern for matching TypeScript/JS import statements.
+    # Groups: (1) "import {Sym} from '"   (2) './path' or '../path'   (3) "';"
+    _JS_IMPORT_PAT = re.compile(
+        r"^(\s*import\s+(?:\{[^}]*\}|\*\s+as\s+\w+|\w+)\s+from\s+['\"])"
+        r"(\.\.[^'\"]+|\.[^'\"]+)"
+        r"(['\";?.*])$"
+    )
+
+    @staticmethod
+    def _resolve_imports_in_text(text: str, global_exports: Dict[str, str]) -> str:
         """Rewrite import statements in transpiled text using global_exports map.
 
         Handles common import syntaxes for the target language:
@@ -413,44 +422,51 @@ class Reassembler:
         resolved_lines: List[str] = []
 
         for line in lines:
-            original = line
-
             # --- TypeScript / JavaScript ---
             # import { Symbol } from './path';
             # import Symbol from './path';
             # import * as Symbol from './path';
-            js_match = re.match(
-                r"^(\s*import\s+(?:\{[^}]*\}|\*\s+as\s+\w+|\w+)\s+from\s+['\"])(\.\.[^'\"]+|\.[^'\"]+)(['\"];?.*)$",
-                line,
-            )
+            js_match = Reassembler._JS_IMPORT_PAT.match(line)
             if js_match:
                 prefix, import_path, suffix = js_match.group(1), js_match.group(2), js_match.group(3)
-                # Strip './' or '../' and .ts/.js extension to get module name
-                module_name = re.sub(r"^\./", "", import_path)
-                module_name = re.sub(r"\.(ts|tsx|js|jsx)$", "", module_name)
-                module_name = module_name.rstrip("/")
+                # prefix = "import { User } from '"  (ends with opening quote)
+                # import_path = './models'
+                # suffix = "';"  (starts with closing quote)
 
-                # Find which symbol(s) are being imported and resolve them
-                symbol_match = re.search(r"import\s+\{([^}]+)\}", prefix + "{" + "}")
-                if symbol_match:
-                    symbols = [s.strip() for s in symbol_match.group(1).split(",")]
-                    resolved_symbols: List[str] = []
-                    for sym in symbols:
-                        if sym in global_exports:
-                            resolved_path = global_exports[sym]
-                            # Update the import path to point to the resolved file
-                            # Compute relative path from the current file context
-                            # For simplicity, we rewrite to absolute-style aliased imports
-                            resolved_symbols.append(sym)
-                        else:
-                            resolved_symbols.append(sym)
-                    resolved_line = f"{prefix}" + ", ".join(resolved_symbols) + f"'{import_path}'{suffix}"
-                    resolved_lines.append(resolved_line)
+                # Extract symbol names from the ORIGINAL line (not from prefix,
+                # whose closing-brace-aware [^}]+ is wrong — it greedily captures
+                # the space after the closing brace too, giving " User " not "User").
+                named_match = re.search(r"import\s+\{([^}]+)\}\s+from", line)
+                if named_match:
+                    symbols = [s.strip() for s in named_match.group(1).split(",")]
+                    resolved_symbols = [s for s in symbols if s in global_exports]
+                    if resolved_symbols == symbols:
+                        # All symbols resolve — original TypeScript is already correct
+                        resolved_lines.append(line)
+                    elif resolved_symbols:
+                        # Some symbols resolve — rebuild with only those.
+                        # prefix ends with the opening quote "'";
+                        # suffix starts with the closing quote "'" (e.g. "';");
+                        # join with: import { resolved } from path+suffix
+                        # import_path = './models'  (no quotes)
+                        # suffix = "';"
+                        # path_with_quotes = import_path + suffix[0] = "'./models'"
+                        # result = "import { User } from " + "'./models'" + ";" = "import { User } from './models';"
+                        path_with_quotes = f"{import_path}{suffix[0]}"
+                        resolved_line = (
+                            f"import {{ {', '.join(resolved_symbols)} }}"
+                            f" from {path_with_quotes}{suffix[1:]}"
+                        )
+                        resolved_lines.append(resolved_line)
+                    else:
+                        # No symbols resolve — keep the original (unknowns will
+                        # cause compile errors, which is the correct signal)
+                        resolved_lines.append(line)
                     continue
-                else:
-                    # Default import - keep as-is with original path
-                    resolved_lines.append(original)
-                    continue
+
+                # Default or wildcard import — preserve as-is
+                resolved_lines.append(line)
+                continue
 
             # --- Rust ---
             # use crate::path::Symbol;
@@ -458,7 +474,6 @@ class Reassembler:
             rust_match = re.match(r"^(\s*use\s+)([^;]+)(;.*)$", line)
             if rust_match:
                 prefix, use_path, suffix = rust_match.group(1), rust_match.group(2), rust_match.group(3)
-                # Check if this is an internal module path (not std/prelude/external crate)
                 is_internal = not any(
                     use_path.startswith(ext) for ext in ("std::", "core::", "alloc::", "crate::")
                 )
@@ -467,15 +482,14 @@ class Reassembler:
                     if len(parts) == 2:
                         module_path, symbol = parts
                         if symbol in global_exports:
-                            # Symbol found in global_exports — rewrite path
                             resolved_use = f"{prefix}{module_path}::{symbol}{suffix}"
                             resolved_lines.append(resolved_use)
                             continue
-                resolved_lines.append(original)
+                resolved_lines.append(line)
                 continue
 
-            # No known import pattern — leave line unchanged
-            resolved_lines.append(original)
+            # No known import pattern — leave unchanged
+            resolved_lines.append(line)
 
         return "\n".join(resolved_lines)
 
