@@ -15,6 +15,7 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 from repo_transmute.pipeline.coordinator import PipelineCoordinator
+from repo_transmute.blueprint import Blueprint
 from repo_transmute.transpiler.chunker import chunk_repository, create_chunks, Chunk
 
 
@@ -471,7 +472,152 @@ def _private():
 # ---------------------------------------------------------------------------
 
 class TestValidationAndRefinement:
-    """_validate_and_refine() and multi-pass refinement are wired correctly."""
+    """_validate_and_refine() and multi-pass refinement are wired correctly.
+
+    These tests verify the full multi-pass refinement loop in
+    transpile_with_refinement() and the _validate_and_refine() method that
+    drives it. They mock the LLM so refinement can be tested without real API
+    calls.
+    """
+
+    def test_validate_and_refine_returns_none_when_valid(self):
+        """When code has no import or type errors, _validate_and_refine returns None."""
+        coord = PipelineCoordinator(target_lang="typescript", max_passes=3)
+
+        # Valid TypeScript — proper imports with extension, no 'any' types
+        valid_code = (
+            "// filename: x.ts\n"
+            "import { foo } from './bar.ts';\n"
+            "export function f(arg: string): number { return 1; }"
+        )
+        coord.validator.validate_imports(valid_code)
+        coord.validator.validate_types(valid_code)
+
+        with patch.object(coord.transpiler, "_call_minimax") as mock_llm:
+            result = coord._validate_and_refine(valid_code, pass_num=2)
+
+        assert result is None, "Expected None for valid code (no refinement needed)"
+        mock_llm.assert_not_called()
+
+    def test_validate_and_refine_calls_llm_when_imports_invalid(self):
+        """Invalid relative imports trigger an LLM call to fix the code."""
+        coord = PipelineCoordinator(target_lang="typescript", max_passes=3)
+
+        bad_code = (
+            "// filename: x.ts\n"
+            "import { foo } from './bar';\n"  # missing .ts extension
+            "export function f(): void { }"
+        )
+
+        fixed_code = (
+            "// filename: x.ts\n"
+            "import { foo } from './bar.ts';\n"  # fixed!
+            "export function f(): void { }"
+        )
+
+        with patch.object(coord.transpiler, "_call_minimax", return_value=fixed_code) as mock_llm:
+            result = coord._validate_and_refine(bad_code, pass_num=2)
+
+        assert result == fixed_code, "Expected refined code from LLM"
+        mock_llm.assert_called_once()
+        call_args = mock_llm.call_args[0][0]
+        assert "Import errors" in call_args
+        assert "./bar" in call_args
+
+    def test_validate_and_refine_calls_llm_when_types_invalid(self):
+        """TypeScript code using 'any' type triggers an LLM fix call."""
+        coord = PipelineCoordinator(target_lang="typescript", max_passes=3)
+
+        bad_code = (
+            "// filename: x.ts\n"
+            "export function f(arg: any): any { return arg; }"
+        )
+
+        fixed_code = (
+            "// filename: x.ts\n"
+            "export function f(arg: string): number { return 1; }"
+        )
+
+        with patch.object(coord.transpiler, "_call_minimax", return_value=fixed_code) as mock_llm:
+            result = coord._validate_and_refine(bad_code, pass_num=2)
+
+        assert result == fixed_code
+        mock_llm.assert_called_once()
+        call_args = mock_llm.call_args[0][0]
+        assert "Type errors" in call_args
+
+    def test_validate_and_refine_returns_none_on_llm_exception(self):
+        """If the LLM call fails, _validate_and_refine returns None gracefully."""
+        coord = PipelineCoordinator(target_lang="typescript", max_passes=3)
+
+        bad_code = "import { foo } from './bar';"
+
+        with patch.object(coord.transpiler, "_call_minimax", side_effect=Exception("LLM error")):
+            result = coord._validate_and_refine(bad_code, pass_num=2)
+
+        assert result is None, "Expected None when LLM fails (no crash)"
+
+    def test_transpile_with_refinement_single_pass_when_code_valid(self, tmp_path):
+        """Valid pass-1 output: refinement loop exits after pass 1, no extra LLM calls."""
+        coord = PipelineCoordinator(target_lang="typescript", max_passes=3)
+        output_dir = tmp_path / "out"
+
+        valid_code = (
+            "// filename: x.ts\n"
+            "import { foo } from './foo.ts';\n"
+            "export function f(): void { }"
+        )
+        coord.transpiler.transpile = lambda path, target, output_dir=None: valid_code
+
+        from repo_transmute.blueprint import Blueprint
+        bp = Blueprint(repo="test", language="python", functions=[], data_structures=[])
+
+        with patch.object(coord.transpiler, "_call_minimax") as mock_llm:
+            result = coord.transpile_with_refinement(bp, output_dir=output_dir)
+
+        assert result == valid_code
+        assert mock_llm.call_count == 0, (
+            f"Expected 0 LLM calls (code was already valid), got {mock_llm.call_count}"
+        )
+
+    def test_transpile_with_refinement_second_pass_called_when_code_invalid(self, tmp_path):
+        """Pass 1 returns bad code -> _validate_and_refine triggers pass 2 LLM call."""
+        coord = PipelineCoordinator(target_lang="typescript", max_passes=2)
+        output_dir = tmp_path / "out"
+
+        bad_code = (
+            "// filename: x.ts\n"
+            "import { foo } from './bar';\n"  # missing .ts — invalid
+            "export function f(arg: any): any { return arg; }\n"  # 'any' types — invalid
+        )
+        fixed_code = (
+            "// filename: x.ts\n"
+            "import { foo } from './bar.ts';\n"
+            "export function f(arg: string): number { return 1; }"
+        )
+
+        call_count = [0]
+
+        def mock_transpile(path, target, output_dir=None):
+            call_count[0] += 1
+            return bad_code
+
+        coord.transpiler.transpile = mock_transpile
+
+        with patch.object(coord.transpiler, "_call_minimax", return_value=fixed_code) as mock_llm:
+            result = coord.transpile_with_refinement(
+                Blueprint(repo="test", language="python", functions=[], data_structures=[]),
+                output_dir=output_dir,
+            )
+
+        # Pass 1: transpile() called -> bad code
+        # Pass 2: _validate_and_refine calls _call_minimax -> fixed code
+        assert call_count[0] == 1, f"Expected 1 transpile call (pass 1), got {call_count[0]}"
+        assert mock_llm.call_count == 1, f"Expected 1 LLM call (pass 2 refinement), got {mock_llm.call_count}"
+        assert result == fixed_code
+        assert len(coord.results) == 2, f"Expected 2 results [bad, fixed], got {len(coord.results)}"
+
+    # --- original Phase 5 tests (kept for coverage) ---
 
     def test_validate_and_refine_is_called_when_code_has_issues(self, twint_repo):
         """With max_passes=2, _validate_and_refine is called after pass 1."""
