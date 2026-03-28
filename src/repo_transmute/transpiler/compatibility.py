@@ -61,7 +61,7 @@ COMPLEXITY_THRESHOLDS = {
 def calculate_complexity(file_count: int, function_count: int, dep_count: int = 0) -> int:
     """Calculate complexity score 1-10."""
     score = 1
-    
+
     # File count contribution
     if file_count > 100:
         score += 3
@@ -69,7 +69,7 @@ def calculate_complexity(file_count: int, function_count: int, dep_count: int = 
         score += 2
     elif file_count > 5:
         score += 1
-    
+
     # Function count contribution
     if function_count > 500:
         score += 3
@@ -77,13 +77,13 @@ def calculate_complexity(file_count: int, function_count: int, dep_count: int = 
         score += 2
     elif function_count > 20:
         score += 1
-    
+
     # Dependency contribution
     if dep_count > 50:
         score += 2
     elif dep_count > 10:
         score += 1
-    
+
     return min(score, 10)
 
 
@@ -95,46 +95,57 @@ def check_compatibility(
     dep_count: int = 0
 ) -> CompatibilityResult:
     """Check if transpilation is recommended.
-    
+
     Args:
         source_lang: Detected source language
         target_lang: Optional desired target (if None, auto-recommend)
         file_count: Number of source files
         function_count: Number of functions
         dep_count: Number of dependencies
-        
+
     Returns:
         CompatibilityResult with recommendation
     """
     warnings = []
-    
+
     # Normalize source language
     source = _normalize_language(source_lang)
-    
+
     # Get routing recommendation
-    if source in ROUTING_TABLE:
-        recommended, confidence, reason = ROUTING_TABLE[source]
-        if recommended is None:
-            return CompatibilityResult(
-                compatible=False,
-                recommended_target=None,
-                confidence=confidence,
-                warnings=[f"Source is {source_lang} - no transpilation needed"],
-                complexity_score=calculate_complexity(file_count, function_count, dep_count)
-            )
-    else:
+    if source is Language.UNKNOWN:
         return CompatibilityResult(
             compatible=False,
             recommended_target=None,
             confidence=0.0,
             warnings=[f"Unknown language: {source_lang}"],
-            complexity_score=calculate_complexity(file_count, function_count, dep_count)
+            complexity_score=calculate_complexity(file_count, function_count, dep_count),
         )
-    
+
+    if source not in ROUTING_TABLE:
+        return CompatibilityResult(
+            compatible=False,
+            recommended_target=None,
+            confidence=0.0,
+            warnings=[f"Unsupported language: {source_lang}"],
+            complexity_score=calculate_complexity(file_count, function_count, dep_count),
+        )
+
+    recommended, confidence, reason = ROUTING_TABLE[source]
+
+    if recommended is None:
+        return CompatibilityResult(
+            compatible=False,
+            recommended_target=None,
+            confidence=confidence,
+            warnings=[f"Source is {source_lang} - no transpilation needed"],
+            complexity_score=calculate_complexity(file_count, function_count, dep_count),
+        )
+
     # Check if target matches recommendation
     if target_lang:
         target_normalized = _normalize_language(target_lang)
-        if recommended and target_normalized != recommended.value:
+        # Compare enum values (strings) to handle aliases like "ts" → TYPESCRIPT
+        if recommended.value and target_normalized.value != recommended.value:
             warnings.append(
                 f"Target {target_lang} differs from recommended {recommended.value}. "
                 f"Confidence: {confidence - 0.2:.0%}"
@@ -144,7 +155,7 @@ def check_compatibility(
     else:
         actual_target = recommended.value if recommended else None
         warnings.append(f"Recommended: {recommended.value} ({reason})")
-    
+
     # Complexity check
     complexity = calculate_complexity(file_count, function_count, dep_count)
     if complexity >= 8:
@@ -154,59 +165,64 @@ def check_compatibility(
         confidence -= 0.3
     elif complexity >= 5:
         warnings.append(f"Medium complexity ({complexity}/10)")
-    
+
     # Confidence floor
     confidence = max(confidence, 0.0)
-    
+
     return CompatibilityResult(
         compatible=confidence >= 0.5,
         recommended_target=actual_target,
         confidence=confidence,
         warnings=warnings,
-        complexity_score=complexity
+        complexity_score=complexity,
     )
 
 
+# ---------------------------------------------------------------------------
+# Language normalization helpers
+# ---------------------------------------------------------------------------
+
+_JAVASCRIPT_VARIANTS = ("javascript", "js", "jsx")
+_TYPESCRIPT_VARIANTS = ("typescript", "ts", "tsx")
+_PYTHON_VARIANTS = ("python", "py")
+_RUST_VARIANTS = ("rust", "rs")
+_GO_VARIANTS = ("go", "golang")
+_JAVA_VARIANTS = ("java",)
+_RUBY_VARIANTS = ("ruby", "rb")
+_PHP_VARIANTS = ("php",)
+_CSHARP_VARIANTS = ("csharp", "c#", "cs")
+
+
 def _normalize_language(lang: str) -> Language:
-    """Normalize language string to enum."""
+    """Normalize language string to enum.
+
+    Args:
+        lang: Language name or abbreviation (case-insensitive).
+
+    Returns:
+        Matching Language enum member, or Language.UNKNOWN.
+    """
     lang_lower = lang.lower().strip()
-    
-    # JavaScript variants
-    if lang_lower in ("javascript", "js", "jsx"):
+
+    if lang_lower in _JAVASCRIPT_VARIANTS:
         return Language.JAVASCRIPT
-    
-    # TypeScript variants
-    if lang_lower in ("typescript", "ts", "tsx"):
+    if lang_lower in _TYPESCRIPT_VARIANTS:
         return Language.TYPESCRIPT
-    
-    # Python
-    if lang_lower in ("python", "py"):
+    if lang_lower in _PYTHON_VARIANTS:
         return Language.PYTHON
-    
-    # Rust
-    if lang_lower in ("rust", "rs"):
+    if lang_lower in _RUST_VARIANTS:
         return Language.RUST
-    
-    # Go
-    if lang_lower in ("go", "golang"):
+    if lang_lower in _GO_VARIANTS:
         return Language.GO
-    
-    # Java
-    if lang_lower in ("java"):
+    if lang_lower in _JAVA_VARIANTS:
         return Language.JAVA
-    
-    # Ruby
-    if lang_lower in ("ruby", "rb"):
+    if lang_lower in _RUBY_VARIANTS:
         return Language.RUBY
-    
-    # PHP
-    if lang_lower in ("php"):
+    if lang_lower in _PHP_VARIANTS:
         return Language.PHP
-    
-    # C#
-    if lang_lower in ("csharp", "c#", "cs"):
+    if lang_lower in _CSHARP_VARIANTS:
         return Language.CSHARP
-    
+
     return Language.UNKNOWN
 
 
