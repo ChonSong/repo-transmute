@@ -213,6 +213,181 @@ Blueprint:
 {blueprint_content}
 """
 
+PYTHON_TO_GO = """You are an expert Python to Go developer. Convert this blueprint to idiomatic Go.
+
+CRITICAL RULES:
+- Output ONLY Go code. NO markdown fences. NO explanations.
+- Use proper Go project structure: one package per directory, files start with `package main`.
+- Convert Python classes to Go structs with receiver methods.
+- Convert Python None -> nil (not null, not undefined).
+- Convert Python list/dict -> Go slices/maps with appropriate zero values.
+- Use errors with fmt.Errorf and multi-return (func() (T, error)).
+- Convert Python type hints to Go type annotations.
+- Convert Python docstrings to Go comments (//) on the line above the declaration.
+- For struct fields: use JSON tags for serialization: `json:"field_name"`.
+- Handle missing imports - Go requires all packages to be imported.
+- For HTTP APIs: use net/http or Gin (if third-party packages are listed in imports).
+- Follow Go naming conventions: PascalCase for exported names, camelCase for unexported.
+
+FEW-SHOT EXAMPLES:
+
+=== EXAMPLE 1: Python class -> Go struct with methods ===
+
+Blueprint source:
+# Source imports (use as hints only):
+#   import json
+# Data Structures:
+# Config (class)
+# Fields:
+#   host: str
+#   port: int
+# Methods:
+# # load
+# <doc>Load config from a JSON file.</doc>
+# @classmethod
+# def load(cls, path: str) -> Config:
+#     with open(path) as f:
+#         data = json.load(f)
+#     return cls(host=data["host"], port=data["port"])
+# # save
+# def save(self, path: str) -> None:
+#     with open(path, "w") as f:
+#         json.dump(self.__dict__, f)
+
+Expected output:
+// filename: config.go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+)
+
+// Config holds application configuration.
+type Config struct {{
+	Host string `json:"host"`
+	Port int    `json:"port"`
+}}
+
+// Load reads a Config from the given JSON file path.
+func Load(path string) (*Config, error) {{
+	data, err := os.ReadFile(path)
+	if err != nil {{
+		return nil, fmt.Errorf("reading config file: %w", err)
+	}}
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {{
+		return nil, fmt.Errorf("parsing config JSON: %w", err)
+	}}
+	return &cfg, nil
+}}
+
+// Save writes the Config to the given JSON file path.
+func (c *Config) Save(path string) error {{
+	data, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {{
+		return fmt.Errorf("marshaling config: %w", err)
+	}}
+	if err := os.WriteFile(path, data, 0644); err != nil {{
+		return fmt.Errorf("writing config file: %w", err)
+	}}
+	return nil
+}}
+
+=== EXAMPLE 2: Python standalone functions -> Go functions ===
+
+Blueprint source:
+# Source imports (use as hints only):
+#   import os
+#   import base64
+# Functions (grouped by module):
+## utils.py
+# # encode_file
+# <doc>Encode a file to base64.</doc>
+# def encode_file(file_path: str) -> str:
+#     with open(file_path, "rb") as f:
+#         return base64.b64encode(f.read()).decode()
+# # ensure_dir
+# <doc>Ensure directory exists.</doc>
+# def ensure_dir(dir_path: str) -> None:
+#     os.makedirs(dir_path, exist_ok=True)
+
+Expected output:
+// filename: utils.go
+package main
+
+import (
+	"encoding/base64"
+	"os"
+)
+
+// EncodeFile reads a file and returns its contents as a base64-encoded string.
+func EncodeFile(filePath string) (string, error) {{
+	data, err := os.ReadFile(filePath)
+	if err != nil {{
+		return "", fmt.Errorf("reading file: %w", err)
+	}}
+	return base64.StdEncoding.EncodeToString(data), nil
+}}
+
+// EnsureDir creates the directory (and any parents) if it does not exist.
+func EnsureDir(dirPath string) error {{
+	return os.MkdirAll(dirPath, 0755)
+}}
+
+Now transpile the following blueprint to Go:
+
+{{blueprint_content}}
+"""
+
+JAVASCRIPT_TO_GO = r"""You are an expert JavaScript/TypeScript to Go developer. Convert this blueprint to idiomatic Go.
+
+CRITICAL RULES:
+- Output ONLY Go code. NO markdown fences. NO explanations.
+- Use proper Go project structure: one package per directory, files start with `package main`.
+- Convert JS undefined / null → nil.
+- Convert JS arrays → Go slices ([]T).
+- Convert JS objects → Go structs with JSON tags.
+- Convert Promises → Go goroutines with error channels or returned errors.
+- Use proper Go error handling: multiple return values (func() (T, error)).
+- Convert TypeScript types/interfaces → Go struct types with JSON struct tags.
+- For HTTP: use net/http or Gin.
+- Follow Go naming conventions.
+
+Format for multi-file output:
+// filename: path/to/file.go
+<content>
+---FILE_SEPARATOR---
+// filename: path/to/file2.go
+<content>
+
+Blueprint:
+{blueprint_content}
+"""
+
+GO_TO_GO = r"""You are an expert Go developer. Review and improve this Go blueprint with better patterns.
+
+CRITICAL RULES:
+- Output ONLY Go code. NO markdown fences. NO explanations.
+- Ensure all imports are used.
+- Use context.Context for cancellation and timeouts.
+- Prefer structured logging (log/slog) over print statements.
+- Use errors with fmt.Errorf and %w wrap.
+- Add JSON struct tags to all exported struct fields.
+- Follow Go idioms and effective Go best practices.
+
+Format for multi-file output:
+// filename: path/to/file.go
+<content>
+---FILE_SEPARATOR---
+// filename: path/to/file2.go
+<content>
+
+Blueprint:
+{blueprint_content}
+"""
+
 PYTHON_TO_PYTHON = r"""You are an expert Python developer. Improve this Python blueprint with better patterns.
 
 CRITICAL RULES:
@@ -395,12 +570,20 @@ def build_transpile_prompt(
     if source_lower == "python" and target_lower == "rust":
         return PYTHON_TO_RUST.format(blueprint_content=content)
 
+    if source_lower == "python" and target_lower == "go":
+        return PYTHON_TO_GO.format(blueprint_content=content)
+
     if source_lower in ("typescript", "ts") and target_lower in ("typescript", "ts"):
         if has_tsx:
             return TSX_TEMPLATE.format(blueprint_content=content)
         return TYPESCRIPT_TO_TYPESCRIPT.format(blueprint_content=content)
 
     if source_lower in ("javascript", "js"):
+        if target_lower == "go":
+            return JAVASCRIPT_TO_GO.format(blueprint_content=content)
         return JAVASCRIPT_TO_TYPESCRIPT.format(blueprint_content=content)
+
+    if source_lower == "go" and target_lower == "go":
+        return GO_TO_GO.format(blueprint_content=content)
 
     return f"Convert this {source_lang} code to {target_lang}:\n\n{content}"
