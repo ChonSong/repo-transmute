@@ -112,6 +112,7 @@ def sample_chunks(tmp_path):
 # IntegrationValidator
 # ---------------------------------------------------------------------------
 
+from repo_transmute.transpiler.validate import ValidationResult
 class TestIntegrationValidator:
     def test_validate_ts_imports_missing_extension_is_flagged(self):
         """Missing extension on relative import is correctly flagged."""
@@ -197,6 +198,65 @@ class TestIntegrationValidator:
         assert report.type_valid is False
         assert len(report.errors) == 2
         assert report.is_valid is False
+
+    # -----------------------------------------------------------------------
+    # Go validation
+    # -----------------------------------------------------------------------
+    def test_go_validate_imports_missing_package(self):
+        v = IntegrationValidator(target_lang="go")
+        code = "func main() {}"
+        result = v.validate_imports(code)
+        assert result is False
+        assert any("package declaration" in e for e in v.import_errors)
+
+    def test_go_validate_imports_bare_unquoted(self):
+        v = IntegrationValidator(target_lang="go")
+        code = 'package main\nimport os\nimport "fmt"'
+        result = v.validate_imports(code)
+        assert result is False
+        assert any("Unquoted import" in e for e in v.import_errors)
+
+    def test_go_validate_imports_python_from_import(self):
+        v = IntegrationValidator(target_lang="go")
+        code = 'package main\nfrom os import getcwd'
+        result = v.validate_imports(code)
+        assert result is False
+        assert any("Python-style" in e for e in v.import_errors)
+
+    def test_go_validate_imports_valid(self):
+        v = IntegrationValidator(target_lang="go")
+        code = 'package main\nimport "fmt"\nimport "os"'
+        result = v.validate_imports(code)
+        assert result is True
+        assert len(v.import_errors) == 0
+
+    def test_go_validate_types_none_comparison(self):
+        v = IntegrationValidator(target_lang="go")
+        code = 'package main\nfunc main() { if x == None {} }'
+        result = v.validate_types(code)
+        assert result is False
+        assert any("== nil" in e for e in v.type_errors)
+
+    def test_go_validate_types_ts_style_annotations(self):
+        v = IntegrationValidator(target_lang="go")
+        code = 'package main\nvar name: string = "test"'
+        result = v.validate_types(code)
+        assert result is False
+        assert any("TypeScript type syntax" in e for e in v.type_errors)
+
+    def test_go_validate_types_unexported_func(self):
+        v = IntegrationValidator(target_lang="go")
+        code = 'package main\nfunc lowercase() {}'
+        result = v.validate_types(code)
+        assert result is False
+        assert any("unexported" in e.lower() for e in v.type_errors)
+
+    def test_go_validate_types_valid(self):
+        v = IntegrationValidator(target_lang="go")
+        code = 'package main\nfunc Exported() {}\ntype MyStruct struct {}'
+        result = v.validate_types(code)
+        assert result is True
+        assert len(v.type_errors) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -375,10 +435,9 @@ class TestPipelineCoordinatorTranspileChunk:
         """transpile_chunk must return a non-empty string."""
         coord = PipelineCoordinator(target_lang="typescript", max_passes=1)
         chunk0 = sample_chunks[0]
-        coord.transpiler.transpile = lambda path, target, output_dir=None: "// output"
+        coord.transpiler.transpile = lambda path, target, output_dir=None: ("// output", ValidationResult(success=True))
         result = coord.transpile_chunk(chunk0, tmp_path, "python", None)
-        assert isinstance(result, str)
-        assert len(result) > 0
+        code, vr = result; assert isinstance(code, str) and len(code) > 0
 
     def test_transpile_chunk_handles_all_languages(self, sample_chunks, tmp_path):
         """JavaScript chunks should use the JS extractor without crashing."""
@@ -387,9 +446,9 @@ class TestPipelineCoordinatorTranspileChunk:
         js_chunk = Chunk(id=99, files=[js_file], imports=[], exports=[], dependencies=[])
 
         coord = PipelineCoordinator(target_lang="typescript", max_passes=1)
-        coord.transpiler.transpile = lambda path, target, output_dir=None: "// ts"
+        coord.transpiler.transpile = lambda path, target, output_dir=None: ("// ts", ValidationResult(success=True))
         result = coord.transpile_chunk(js_chunk, tmp_path, "javascript", None)
-        assert isinstance(result, str)
+        code, vr = result; assert isinstance(code, str)
 
     def test_transpile_chunk_skips_unreadable_files(self, sample_chunks, tmp_path):
         """Files that can't be parsed should be skipped, not crash."""
@@ -398,9 +457,9 @@ class TestPipelineCoordinatorTranspileChunk:
         chunk = Chunk(id=0, files=[bad_file], imports=[], exports=[], dependencies=[])
 
         coord = PipelineCoordinator(target_lang="typescript", max_passes=1)
-        coord.transpiler.transpile = lambda path, target, output_dir=None: "// ok"
+        coord.transpiler.transpile = lambda path, target, output_dir=None: ("// ok", ValidationResult(success=True))
         result = coord.transpile_chunk(chunk, tmp_path, "python", None)
-        assert isinstance(result, str)
+        code, vr = result; assert isinstance(code, str)
 
     def test_transpile_chunk_includes_data_structures(self, sample_chunks, tmp_path):
         """Blueprint should include data_structures extracted from class files."""
@@ -458,9 +517,10 @@ class TestGenerateModuleTests:
         assert "test_add" in result
 
     def test_generate_unsupported_lang(self, tmp_path):
-        go_file = tmp_path / "main.go"
-        go_file.write_text("package main")
-        result = generate_module_tests([go_file], "go")
+        # Go is now supported — use an unsupported language like COBOL
+        cobol_file = tmp_path / "main.cbl"
+        cobol_file.write_text("       IDENTIFICATION DIVISION.")
+        result = generate_module_tests([cobol_file], "cobol")
         assert "not supported" in result
 
 

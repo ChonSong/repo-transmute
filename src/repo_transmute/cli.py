@@ -70,7 +70,8 @@ def cli():
 @click.option("--output-dir", "-o", type=click.Path(path_type=Path), default=DEFAULT_OUTPUT_DIR, help="Output directory for blueprints")
 @click.option("--cache-dir", "-c", type=click.Path(path_type=Path), default=DEFAULT_CACHE_DIR, help="Cache directory for cloned repos")
 @click.option("--target", "-t", default=None, help="Target language (auto-detected if not specified)")
-def ingest(repo: str, output_dir: Path, cache_dir: Path, target: str):
+@click.option("--reindex", is_flag=True, default=False, help="Force delete cached repo and re-clone (ignores cache)")
+def ingest(repo: str, output_dir: Path, cache_dir: Path, target: str, reindex: bool):
     """Clone repo and extract blueprint."""
     if not repo:
         click.echo("Error: repo argument required", err=True)
@@ -83,6 +84,12 @@ def ingest(repo: str, output_dir: Path, cache_dir: Path, target: str):
     owner, name = repo.split("/", 1)
     cache_dir.mkdir(parents=True, exist_ok=True)
 
+    repo_dest = cache_dir / f"{owner}__{name}"
+    if reindex and repo_dest.exists():
+        import shutil
+        shutil.rmtree(repo_dest)
+        click.echo("Forced re-clone requested (--reindex).")
+
     click.echo(f"Cloning {repo}...")
     try:
         repo_path = clone_repo(owner, name, cache_dir)
@@ -90,6 +97,11 @@ def ingest(repo: str, output_dir: Path, cache_dir: Path, target: str):
     except Exception as e:
         click.echo(f"Error cloning repo: {e}", err=True)
         return
+
+    from repo_transmute.ingestion.clone import get_last_commit_time
+    last_modified: str | None = get_last_commit_time(repo_path)
+    if last_modified:
+        click.echo(f"Last commit: {last_modified}")
 
     click.echo("Detecting language...")
     try:
@@ -147,7 +159,7 @@ def ingest(repo: str, output_dir: Path, cache_dir: Path, target: str):
 
     click.echo("Saving blueprint...")
     try:
-        output_path = save_blueprint(blueprint, output_dir)
+        output_path = save_blueprint(blueprint, output_dir, last_modified=last_modified)
         click.echo(f"Saved to {output_path}")
     except Exception as e:
         click.echo(f"Error saving blueprint: {e}", err=True)
@@ -545,10 +557,14 @@ def validate_cmd(file: str, language: str):
 @cli.command()
 @click.argument("query", required=False)
 @click.option("--limit", "-n", type=int, default=10, help="Maximum number of results")
-@click.option("--repo", "-r", default=None, help="Filter results to this repo")
+@click.option("--repo", "-r", "repo_opt", default=None, help="Filter results to this repo (alias: --blueprint)")
+@click.option("--blueprint", "-b", "blueprint_opt", default=None, help="Alias for --repo")
 @click.option("--kind", "-k", default=None, type=click.Choice(["function", "class"]), help="Filter by kind")
+@click.option("--language", "-l", default=None, help="Filter by language (python, typescript, rust, go)")
+@click.option("--as-json", "--json", "as_json", is_flag=True, default=False, help="Output results as JSON")
+@click.option("--explain", "explain_uid", default=None, metavar="UID", help="Show full indexed document for a UID instead of searching")
 @click.option("--index-dir", "-i", type=click.Path(path_type=Path), default=DEFAULT_TXTAI_DIR, help="TXTAI index directory")
-def search(query: str, limit: int, repo: str, kind: str, index_dir: Path):
+def search(query: str, limit: int, repo_opt: str, blueprint_opt: str, kind: str, language: str, as_json: bool, explain_uid: str, index_dir: Path):
     """Search indexed blueprints using semantic similarity.
 
     Requires blueprints to have been indexed first with:
@@ -558,10 +574,15 @@ def search(query: str, limit: int, repo: str, kind: str, index_dir: Path):
         repo-transmute search "authentication middleware"
         repo-transmute search "rate limiting" --limit 5
         repo-transmute search "database pool" --repo HKUDS/nanobot --kind function
+        repo-transmute search "JWT" --blueprint HKUDS/nanobot --json
+        repo-transmute search --explain f1a2b3c4   # show full doc for UID
     """
     if not query:
         click.echo("Error: query argument required.", err=True)
         return
+
+    # Normalise --repo / --blueprint alias
+    target_repo = repo_opt or blueprint_opt
 
     try:
         client = TxtaiClient(index_dir=index_dir)
@@ -571,14 +592,52 @@ def search(query: str, limit: int, repo: str, kind: str, index_dir: Path):
 
     try:
         bp_search = BlueprintSearch(client)
+
+        # --explain mode: show raw indexed document for a UID
+        if explain_uid is not None:
+            try:
+                explanation = bp_search.explain(explain_uid)
+            except Exception as e:
+                click.echo(f"Error explaining UID '{explain_uid}': {e}", err=True)
+                return
+            click.echo(f"=== Explain UID: {explain_uid} ===")
+            click.echo(f"  Score: {explanation.get('score', 'N/A')}")
+            if 'text' in explanation:
+                click.echo(f"  Text:  {explanation['text'][:200]}")
+            for k, v in explanation.items():
+                if k not in ('score', 'text'):
+                    click.echo(f"  {k}: {v}")
+            return
+
+        if not query:
+            click.echo("Error: query argument required (or use --explain).", err=True)
+            return
+
         results = bp_search.search(query, limit=limit)
 
-        if repo:
-            results = results.by_repo(repo)
+        if target_repo:
+            results = results.by_repo(target_repo)
         if kind:
             results = results.by_kind(kind)
+        if language:
+            results = results.by_language(language)
 
+        # --as-json: structured output
+        if as_json:
+            import json
+            payload = {
+                "query": query,
+                "total_indexed": results.total_indexed,
+                "returned": len(results.hits),
+                "hits": results.as_dicts(),
+            }
+            click.echo(json.dumps(payload, indent=2))
+            return
+
+        # Human-readable output
         click.echo(f"\nQuery: \"{query}\"")
+        if target_repo:
+            click.echo(f"Repo filter: {target_repo}")
         click.echo(f"Total indexed: {results.total_indexed} | Returned: {len(results.hits)}")
         click.echo("-" * 60)
 
@@ -591,9 +650,11 @@ def search(query: str, limit: int, repo: str, kind: str, index_dir: Path):
             click.echo(f"\n[{hit.kind}] {hit.name}  (score={hit.score:.3f})")
             click.echo(f"  Repo:     {hit.repo}")
             click.echo(f"  Language: {hit.language}")
-            click.echo(f"  File:     {hit.file}:{hit.line}")
+            click.echo(f"  Location: {hit.file}:{hit.line}")
             if hit.signature:
                 click.echo(f"  Signature: {hit.signature}")
+            if hit.snippet:
+                click.echo(f"  Snippet:  {hit.snippet[:150]}")
             if hit.docstring:
                 click.echo(f"  Doc:      {hit.docstring[:120]}")
 
@@ -607,13 +668,20 @@ def search(query: str, limit: int, repo: str, kind: str, index_dir: Path):
 @click.option("--blueprints-dir", "-b", "blueprints_dir_opt", type=click.Path(path_type=Path), default=None, help="Directory with YAML blueprints (default: data/blueprints)")
 @click.option("--index-dir", "-i", type=click.Path(path_type=Path), default=DEFAULT_TXTAI_DIR, help="TXTAI index output directory")
 @click.option("--save/--no-save", default=True, help="Persist index to disk after building")
-def index(blueprints_dir, blueprints_dir_opt, index_dir, save):
+@click.option("--force/--no-force", "force", default=False, help="Re-index all repos even if unchanged since last run (disables skip-unchanged)")
+def index(blueprints_dir, blueprints_dir_opt, index_dir, save, force):
     """Build TXTAI semantic index from YAML blueprints.
 
     Examples:
         repo-transmute index                        # index data/blueprints/
         repo-transmute index ./my-blueprints/       # index a custom directory
         repo-transmute index -i /path/to/my-index   # custom index location
+        repo-transmute index --force                # re-index everything, skip unchanged detection
+
+    Deduplication (Phase 7):
+      When a repo has not changed since the last indexing run (its last commit
+      time matches), all of its blueprint files are skipped automatically.
+      Use --force to override this and re-index every repo regardless.
     """
     from repo_transmute.blueprint.storage import load_blueprint
 
@@ -634,42 +702,43 @@ def index(blueprints_dir, blueprints_dir_opt, index_dir, save):
 
     click.echo(f"Indexing blueprints from: {bp_dir}")
     click.echo(f"Index directory: {index_dir}")
+    if force:
+        click.echo("Mode: FULL (--force) — re-indexing all repos")
+    else:
+        click.echo("Mode: INCREMENTAL — unchanged repos will be skipped")
     click.echo(f"Found {len(yaml_files)} blueprint file(s)")
 
     try:
         client = TxtaiClient(index_dir=index_dir)
         indexer = BlueprintIndexer(client)
 
-        for path in sorted(yaml_files):
-            name = path.stem
-            chunk_id = 0
-            if "." in name:
-                maybe_chunk = name.rsplit(".", 1)[-1]
-                if maybe_chunk.startswith("chunk"):
-                    try:
-                        chunk_id = int(maybe_chunk[len("chunk"):])
-                    except ValueError:
-                        pass
-
-            try:
-                stats = indexer.index_blueprint_from_yaml(path, chunk_id=chunk_id)
-                click.echo(f"  ✓ {path.name} — {stats.functions_indexed} funcs, "
-                           f"{stats.classes_indexed} classes")
-            except Exception as e:
-                click.echo(f"  ✗ {path.name} — skipped: {e}", err=True)
+        try:
+            stats = indexer.index_directory(bp_dir, skip_unchanged=not force)
+        except Exception as e:
+            click.echo(f"Indexing failed: {e}", err=True)
+            return
 
         total = indexer.stats()
         click.echo(f"\nIndexed {total.documents_created} documents "
                    f"({total.functions_indexed} functions, {total.classes_indexed} classes)")
 
+        if total.skipped > 0:
+            click.echo(f"Skipped {total.skipped} unchanged repo(s) "
+                       f"(use --force to re-index)")
+
+        indexed_repos = client.get_indexed_repo_names()
+        click.echo(f"Total repos in index: {len(indexed_repos)}")
+
         if save:
             client.save()
-            click.echo(click.style(f"✅ Index saved to {index_dir}", fg="green"))
+            click.echo(click.style(f"\u2705 Index saved to {index_dir}", fg="green"))
         else:
-            click.echo("⚡ Index not persisted (--no-save). Re-run with --save to persist.")
+            click.echo("\u26a1 Index not persisted (--no-save). Re-run with --save to persist.")
 
     finally:
         client.close()
+
+
 
 
 @cli.command()

@@ -74,14 +74,25 @@ class TxtaiClient:
         return self.index_dir / self._META_DB
 
     def _init_meta_db(self) -> None:
-        """Create the metadata table if it doesn't exist."""
+        """Create the metadata tables if they don't exist."""
         db = self._meta_path
         conn = sqlite3.connect(db)
+        # Per-document metadata (existing)
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS meta (
                 uid TEXT PRIMARY KEY,
                 data TEXT NOT NULL
+            )
+            """
+        )
+        # Per-repo last-indexed timestamps (Phase 7 — deduplication)
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS repo_meta (
+                repo TEXT PRIMARY KEY,
+                last_indexed TEXT NOT NULL,
+                last_modified TEXT
             )
             """
         )
@@ -109,6 +120,80 @@ class TxtaiClient:
         ).fetchall()
         conn.close()
         return {uid: json.loads(data) for uid, data in rows}
+
+    # ------------------------------------------------------------------
+    # Repo-level metadata (last_indexed timestamps for deduplication)
+    # ------------------------------------------------------------------
+
+    def set_repo_last_indexed(
+        self,
+        repo: str,
+        last_indexed: str,
+        last_modified: Optional[str] = None,
+    ) -> None:
+        """Record when a repo was last indexed.
+
+        Args:
+            repo: Repository identifier, e.g. "HKUDS/nanobot"
+            last_indexed: ISO-8601 timestamp of this indexing run
+            last_modified: ISO-8601 timestamp of the last git commit
+                           that contributed to this index (None = unknown)
+        """
+        conn = sqlite3.connect(self._meta_path)
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO repo_meta (repo, last_indexed, last_modified)
+            VALUES (?, ?, ?)
+            """,
+            (repo, last_indexed, last_modified),
+        )
+        conn.commit()
+        conn.close()
+
+    def get_repo_last_indexed(self, repo: str) -> Optional[str]:
+        """Return the last_indexed timestamp for a repo, or None if never indexed."""
+        conn = sqlite3.connect(self._meta_path)
+        row = conn.execute(
+            "SELECT last_indexed FROM repo_meta WHERE repo = ?",
+            (repo,),
+        ).fetchone()
+        conn.close()
+        return row[0] if row else None
+
+    def get_repo_last_modified(self, repo: str) -> Optional[str]:
+        """Return the last_modified (git commit time) for a repo's last indexing run."""
+        conn = sqlite3.connect(self._meta_path)
+        row = conn.execute(
+            "SELECT last_modified FROM repo_meta WHERE repo = ?",
+            (repo,),
+        ).fetchone()
+        conn.close()
+        return row[0] if row else None
+
+    def get_indexed_repos(self) -> List[Dict[str, str]]:
+        """Return all repos that have been indexed, with their last_indexed times.
+
+        Returns:
+            List of dicts: [{"repo": "owner/repo", "last_indexed": "...", "last_modified": "..."}]
+        """
+        conn = sqlite3.connect(self._meta_path)
+        rows = conn.execute(
+            "SELECT repo, last_indexed, last_modified FROM repo_meta ORDER BY repo"
+        ).fetchall()
+        conn.close()
+        return [
+            {"repo": r[0], "last_indexed": r[1], "last_modified": r[2]}
+            for r in rows
+        ]
+
+    def get_indexed_repo_names(self) -> List[str]:
+        """Return just the repo names that have been indexed."""
+        conn = sqlite3.connect(self._meta_path)
+        rows = conn.execute(
+            "SELECT repo FROM repo_meta ORDER BY repo"
+        ).fetchall()
+        conn.close()
+        return [r[0] for r in rows]
 
     # ------------------------------------------------------------------
     # Lifecycle

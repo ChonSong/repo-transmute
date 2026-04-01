@@ -190,6 +190,9 @@ def create_chunks(files: List[Path], base_path: Optional[Path] = None, max_funct
 class Reassembler:
     """Combines transpiled chunks back into a single codebase."""
 
+    # Pattern that matches the marker lines combine() produces
+    _CHUNK_FILENAME_PAT = re.compile(r"^// ?filename: .+$")
+
     def __init__(self, chunks: List[Chunk], base_path: Optional[Path] = None):
         self.chunks = {chunk.id: chunk for chunk in chunks}
         sorted_chunks = sorted(chunks, key=lambda c: c.id)
@@ -226,11 +229,21 @@ class Reassembler:
             remaining -= set(ready)
         return sorted_ids
 
+    def _content_starts_with_filename_marker(self, code: str) -> bool:
+        """Return True if code already starts with a // filename: marker line."""
+        first_line = code.lstrip().split("\n", 1)[0]
+        return bool(self._CHUNK_FILENAME_PAT.match(first_line))
+
     def combine(self) -> str:
         """Merge all transpiled chunks into a single string.
 
         Adds // filename: <relative_path> markers before each chunk's output
         so write_files() can preserve directory structure.
+
+        If the transpiled code for a chunk already starts with a
+        // filename: marker (produced by the LLM transpiler itself),
+        no additional marker is prepended — the LLM's own markers are
+        authoritative.
         """
         if not self.transpiled:
             return ""
@@ -240,10 +253,11 @@ class Reassembler:
             chunk = self.chunks[chunk_id]
             code = self.transpiled.get(chunk_id, "")
 
-            # Only add chunk-level filename markers if add_transpiled was called with file_paths.
-            # This preserves backward compat: tests calling add_transpiled(code) without file_paths
-            # get no chunk-level markers, and write_files falls back to func/class detection.
-            if chunk_id in self._chunk_file_paths:
+            # Only add chunk-level filename markers if:
+            # 1. add_transpiled was called with file_paths, AND
+            # 2. the transpiled code does NOT already start with a // filename:
+            #    marker (LLM-generated markers are authoritative)
+            if chunk_id in self._chunk_file_paths and not self._content_starts_with_filename_marker(code):
                 for src_file in self._chunk_file_paths[chunk_id]:
                     try:
                         rel = src_file.relative_to(self.base_path)

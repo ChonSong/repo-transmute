@@ -484,6 +484,7 @@ def extract_all(repo_path: Path, language: str) -> Blueprint:
         "python": {".py"},
         "javascript": {".js", ".jsx"},
         "typescript": {".ts", ".tsx"},
+        "go": {".go"},
     }
     
     extensions = lang_exts.get(language, {".py"})
@@ -492,24 +493,39 @@ def extract_all(repo_path: Path, language: str) -> Blueprint:
         "python": (extract_from_python, extract_classes_from_python),
         "javascript": (extract_from_javascript, None),
         "typescript": (extract_from_typescript, None),
+        "go": (None, None),  # filled in below after import
     }
     
-    func_extractor, class_extractor = extractors.get(language, (extract_from_python, None))
-    
-    for file_path in walk_source_files(repo_path, extensions=extensions):
-        try:
-            # Extract imports for Python files only
-            if language == "python":
-                content = file_path.read_text()
-                file_imports = _extract_imports(content)
-                all_imports.extend(file_imports)
-            
-            functions.extend(func_extractor(file_path))
-            if class_extractor and language == "python":
-                data_structures.extend(class_extractor(file_path))
-        except Exception:
-            # Skip files that can't be parsed
-            continue
+    # Import go_parser lazily to avoid circular imports
+    if language == "go":
+        from repo_transmute.transpiler.go_parser import (
+            extract_from_go,
+            extract_structs_from_go,
+            extract_interfaces_from_go,
+        )
+        for file_path in walk_source_files(repo_path, extensions=extensions):
+            try:
+                functions.extend(extract_from_go(file_path))
+                data_structures.extend(extract_structs_from_go(file_path))
+                data_structures.extend(extract_interfaces_from_go(file_path))
+            except Exception:
+                continue
+    else:
+        func_extractor, class_extractor = extractors.get(language, (extract_from_python, None))
+        for file_path in walk_source_files(repo_path, extensions=extensions):
+            try:
+                # Extract imports for Python files only
+                if language == "python":
+                    content = file_path.read_text()
+                    file_imports = _extract_imports(content)
+                    all_imports.extend(file_imports)
+                
+                functions.extend(func_extractor(file_path))
+                if class_extractor and language == "python":
+                    data_structures.extend(class_extractor(file_path))
+            except Exception:
+                # Skip files that can't be parsed
+                continue
     
     return Blueprint(
         repo=str(repo_path.name),

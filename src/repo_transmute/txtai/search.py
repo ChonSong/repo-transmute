@@ -4,7 +4,7 @@ Provides a high-level search API on top of the txtai index, including
 cross-repo pattern discovery.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -17,7 +17,23 @@ from repo_transmute.txtai.client import TxtaiClient
 
 @dataclass
 class SearchHit:
-    """A single search result."""
+    """A single search result.
+
+    Attributes:
+        uid: Unique document ID in the index.
+        repo: Repo name, e.g. "HKUDS/nanobot".
+        language: Source language, e.g. "python".
+        kind: "function" or "class".
+        name: Function or class name.
+        signature: Full function signature (empty for classes).
+        file: Source file path.
+        line: Line number in source.
+        docstring: First 300 chars of docstring (may be empty).
+        snippet: A focused code snippet from the function/class body,
+                 extracted for relevance. Best-effort: falls back to
+                 docstring or signature if body is not available.
+        score: Relevance score from txtai (0.0–1.0, higher = more relevant).
+    """
     uid: str
     repo: str
     language: str
@@ -28,9 +44,15 @@ class SearchHit:
     line: int
     docstring: str
     score: float
+    snippet: str = ""
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> "SearchHit":
+        snippet = cls._extract_snippet(
+            d.get("body", ""),
+            d.get("docstring", ""),
+            d.get("signature", ""),
+        )
         return cls(
             uid=d.get("id", ""),
             repo=d.get("repo", ""),
@@ -41,8 +63,75 @@ class SearchHit:
             file=d.get("file", ""),
             line=int(d.get("line", 0)),
             docstring=d.get("docstring", ""),
-            score=d.get("score", 0.0),
+            score=float(d.get("score", 0.0)),
+            snippet=snippet,
         )
+
+    @staticmethod
+    def _extract_snippet(body: str, docstring: str, signature: str) -> str:
+        """Extract a focused, readable snippet from available text fields.
+
+        Priority:
+        1. Function body — first 200 chars, cleaned of excessive whitespace.
+        2. Docstring if body is empty.
+        3. Signature if both body and docstring are empty.
+        4. Empty string as last resort.
+        """
+        if body:
+            # Take first meaningful chunk, collapse internal newlines to spaces
+            lines = body.split("\n")
+            first_lines = []
+            total = 0
+            for l in lines:
+                stripped = l.strip()
+                if not stripped:
+                    continue
+                if total + len(stripped) > 200:
+                    remaining = 200 - total
+                    if remaining >= 20:
+                        first_lines.append(stripped[:remaining] + " ...")
+                    break
+                first_lines.append(stripped)
+                total += len(stripped) + 1
+                if total > 200:
+                    break
+            return " ".join(first_lines).strip()
+        if docstring:
+            return docstring[:200].strip()
+        if signature:
+            return signature
+        return ""
+
+    def as_dict(self) -> Dict[str, Any]:
+        """Serialize this hit to a plain dict (JSON-safe)."""
+        return {
+            "uid": self.uid,
+            "repo": self.repo,
+            "language": self.language,
+            "kind": self.kind,
+            "name": self.name,
+            "signature": self.signature,
+            "file": self.file,
+            "line": self.line,
+            "docstring": self.docstring,
+            "snippet": self.snippet,
+            "score": round(self.score, 4),
+        }
+
+    @property
+    def location(self) -> str:
+        """Short location string: 'file:line'."""
+        return f"{self.file}:{self.line}"
+
+    @property
+    def repo_short(self) -> str:
+        """Repo with '/' replaced by ' › ' for display: 'HKUDS › nanobot'."""
+        return self.repo.replace("/", " › ", 1)
+
+    def score_bar(self, width: int = 10) -> str:
+        """Unicode bar representing score (0.0–1.0)."""
+        filled = int(round(self.score * width))
+        return "█" * filled + "░" * (width - filled)
 
 
 @dataclass
@@ -71,11 +160,28 @@ class SearchResults:
             total_indexed=self.total_indexed,
         )
 
+    def by_language(self, language: str) -> "SearchResults":
+        """Filter hits to a specific source language."""
+        return SearchResults(
+            query=self.query,
+            hits=[h for h in self.hits if h.language == language],
+            total_indexed=self.total_indexed,
+        )
+
     def functions_only(self) -> "SearchResults":
         return self.by_kind("function")
 
     def classes_only(self) -> "SearchResults":
         return self.by_kind("class")
+
+    def as_dicts(self) -> List[Dict[str, Any]]:
+        """Serialize all hits to a list of plain dicts (JSON-safe)."""
+        return [h.as_dict() for h in self.hits]
+
+    @property
+    def best(self) -> Optional[SearchHit]:
+        """Top-scoring hit, or None if results are empty."""
+        return self.hits[0] if self.hits else None
 
 
 # --------------------------------------------------------------------------------
@@ -93,12 +199,16 @@ class BlueprintSearch:
         results = search.search("authentication middleware")
         for hit in results.hits:
             print(f"[{hit.repo}] {hit.name}: {hit.signature}")
+            if hit.snippet:
+                print(f"  → {hit.snippet}")
+
+        # Top result
+        best = results.best
+        if best:
+            print(f"Best match: {best.name} (score={best.score:.3f})")
 
         # Filter to functions in Python repos only
-        py_funcs = (
-            results
-            .functions_only()
-        )
+        py_funcs = results.functions_only().by_language("python")
 
         # Cross-repo: find all repos that have a similar pattern
         auth_repos = {h.repo for h in results.hits}
@@ -106,6 +216,10 @@ class BlueprintSearch:
 
         # Explain a result (why did this match?)
         explanation = search.explain(results.hits[0].uid)
+
+        # JSON output
+        import json
+        print(json.dumps(results.as_dicts(), indent=2))
     """
 
     def __init__(self, client: TxtaiClient) -> None:
@@ -124,7 +238,8 @@ class BlueprintSearch:
             limit: Maximum hits to return (default 10).
 
         Returns:
-            SearchResults with a list of SearchHit objects.
+            SearchResults with a list of SearchHit objects, sorted by
+            descending relevance score.
         """
         raw = self.client.search(query, limit=limit)
         hits = [SearchHit.from_dict(r) for r in raw]
@@ -181,7 +296,8 @@ class BlueprintSearch:
     ) -> Dict[str, List[SearchHit]]:
         """Discover how ``pattern`` manifests across multiple repos.
 
-        Returns a dict mapping repo name -> list of up to limit_per_repo hits.
+        Returns a dict mapping repo name -> list of up to limit_per_repo hits,
+        sorted by descending score within each repo.
 
         Use this to answer questions like:
           "How do different repos handle rate limiting?"
@@ -192,8 +308,11 @@ class BlueprintSearch:
         for r in all_results:
             hit = SearchHit.from_dict(r)
             by_repo.setdefault(hit.repo, []).append(hit)
-        # Trim to limit_per_repo per repo
-        return {repo: hits[:limit_per_repo] for repo, hits in by_repo.items()}
+        # Sort each repo's hits by score descending, then trim
+        return {
+            repo: sorted(hits, key=lambda h: h.score, reverse=True)[:limit_per_repo]
+            for repo, hits in by_repo.items()
+        }
 
     def explain(self, uid: str) -> Dict[str, Any]:
         """Return the full indexed document for a uid (for debugging/audit)."""
@@ -202,14 +321,11 @@ class BlueprintSearch:
 
     def repos(self) -> List[str]:
         """List all unique repo names currently indexed."""
-        # We do a broad search and extract unique repos from results.
-        # Since txtai stores arbitrary metadata we can pull it from the index.
         count = self.client.count()
         if count == 0:
             return []
-        # Search with a generic query to get a broad set of results
         raw = self.client.search("*", limit=min(count, 1000))
-        return list({r.get("repo", "") for r in raw if r.get("repo")})
+        return sorted({r.get("repo", "") for r in raw if r.get("repo")})
 
     def languages(self) -> List[str]:
         """List all source languages currently indexed."""
@@ -217,4 +333,18 @@ class BlueprintSearch:
         if count == 0:
             return []
         raw = self.client.search("*", limit=min(count, 1000))
-        return list({r.get("language", "") for r in raw if r.get("language")})
+        return sorted({r.get("language", "") for r in raw if r.get("language")})
+
+    def stats(self) -> Dict[str, int]:
+        """Return summary statistics for the current index."""
+        count = self.client.count()
+        if count == 0:
+            return {"total": 0, "repos": 0, "languages": 0}
+        raw = self.client.search("*", limit=min(count, 1000))
+        repos = {r.get("repo", "") for r in raw if r.get("repo")}
+        langs = {r.get("language", "") for r in raw if r.get("language")}
+        return {
+            "total": count,
+            "repos": len(repos),
+            "languages": len(langs),
+        }

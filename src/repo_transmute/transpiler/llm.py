@@ -3,7 +3,7 @@
 import os
 import re
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Tuple, Dict, Any
 
 import yaml
 import requests
@@ -57,9 +57,22 @@ class Transpiler:
         self,
         blueprint_path: Path,
         target_lang: str = "typescript",
-        output_dir: Optional[Path] = None
-    ) -> str:
-        """Transpile a blueprint to target language."""
+        output_dir: Optional[Path] = None,
+        validate: bool = True,
+    ) -> Tuple[str, "ValidationResult"]:
+        """Transpile a blueprint to target language.
+
+        Args:
+            blueprint_path: Path to blueprint YAML file.
+            target_lang: Target language (typescript, rust, go, python).
+            output_dir: Optional directory to write transpiled output.
+            validate: If True, run real-tool validation (tsc/cargo check/etc.)
+                     after transpiling and return the result.
+
+        Returns:
+            Tuple of (transpiled_code, ValidationResult).
+            The ValidationResult is always success=True when validate=False.
+        """
         with open(blueprint_path) as f:
             blueprint = yaml.safe_load(f)
 
@@ -73,6 +86,7 @@ class Transpiler:
 
         result = self._post_clean(result, target_lang)
 
+        # Write output if requested
         if output_dir:
             output_dir.mkdir(parents=True, exist_ok=True)
             source_repo = blueprint.get("blueprint", {}).get("repo", "unknown")
@@ -80,7 +94,26 @@ class Transpiler:
             output_file = output_dir / f"{source_repo.replace('/', '__')}_{target_lang}.{ext}"
             output_file.write_text(result)
 
-        return result
+        # Run real-tool validation
+        if validate:
+            from repo_transmute.transpiler.validate import validate as real_validate, ValidationResult
+            if output_dir and output_file.exists():
+                vr = real_validate(output_file, target_lang)
+            else:
+                # Write to a temp file to validate
+                import tempfile
+                tmp = tempfile.NamedTemporaryFile(
+                    suffix="." + ext, mode="w", delete=False
+                )
+                tmp.write(result)
+                tmp.close()
+                vr = real_validate(Path(tmp.name), target_lang)
+                Path(tmp.name).unlink(missing_ok=True)
+            validation_result = vr
+        else:
+            validation_result = ValidationResult(success=True, output="validate=False")
+
+        return result, validation_result
 
     def _call_minimax(self, prompt: str) -> str:
         """Call MiniMax API."""

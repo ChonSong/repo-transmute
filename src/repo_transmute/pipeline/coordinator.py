@@ -17,6 +17,7 @@ from repo_transmute.blueprint.storage import save_blueprint
 from repo_transmute.ingestion.clone import clone_repo
 from repo_transmute.ingestion.detector import detect_language
 from repo_transmute.transpiler.llm import Transpiler
+from repo_transmute.transpiler.validate import validate as real_validate, ValidationResult
 from repo_transmute.transpiler.prompts import build_transpile_prompt
 from repo_transmute.transpiler.chunker import (
     chunk_repository,
@@ -91,6 +92,8 @@ class IntegrationValidator:
             return self._validate_rust_imports(code)
         elif self.target_lang == "python":
             return self._validate_python_imports(code)
+        elif self.target_lang in ("go", "golang"):
+            return self._validate_go_imports(code)
 
         return True
 
@@ -134,6 +137,26 @@ class IntegrationValidator:
 
         return len(self.import_errors) == 0
 
+    def _validate_go_imports(self, code: str) -> bool:
+        """Validate Go imports — check package clauses and use statements."""
+        # Check for package declaration
+        pkg_match = re.search(r"^package\s+(\w+)", code, re.MULTILINE)
+        if not pkg_match:
+            self.import_errors.append("Missing package declaration")
+            return False
+
+        # Check for unquoted bare imports (Python-style "import os")
+        bare_imports = re.findall(r'^import\s+(\w+)\s*$', code, re.MULTILINE)
+        for imp in bare_imports:
+            self.import_errors.append(f"Unquoted import (Go uses quotes): import \"{imp}\"")
+
+        # Check for "from X import" (Python-style, not valid Go)
+        py_from_imports = re.findall(r"^from\s+\w+\s+import", code, re.MULTILINE)
+        for _ in py_from_imports:
+            self.import_errors.append("Python-style 'from ... import' not valid in Go")
+
+        return len(self.import_errors) == 0
+
     def validate_types(self, code: str) -> bool:
         """Validate type annotations are correct."""
         self.type_errors = []
@@ -142,6 +165,8 @@ class IntegrationValidator:
             return self._validate_ts_types(code)
         elif self.target_lang == "python":
             return self._validate_python_types(code)
+        elif self.target_lang in ("go", "golang"):
+            return self._validate_go_types(code)
 
         return True
 
@@ -164,6 +189,26 @@ class IntegrationValidator:
 
         return len(self.type_errors) == 0
 
+    def _validate_go_types(self, code: str) -> bool:
+        """Validate Go type annotations and idioms."""
+        # Check for untyped nil comparisons (Python-style "== None")
+        none_comparisons = re.findall(r"==\s*None", code)
+        if none_comparisons:
+            self.type_errors.append("Go uses '== nil', not '== None'")
+
+        # Check for TypeScript-style type annotations (: string) — not valid Go
+        ts_style_types = re.findall(r":\s*(?:string|number|boolean|any|void)", code)
+        if ts_style_types:
+            self.type_errors.append(f"TypeScript type syntax found ({len(ts_style_types)} occurrences); Go uses 'type Name struct' or 'type Name ='")
+
+        # Check that exported functions start with uppercase
+        func_defs = re.findall(r"^func\s+([a-z]\w*)\s*\(", code, re.MULTILINE)
+        for fn in func_defs:
+            if fn[0].islower():
+                self.type_errors.append(f"Unexported function '{fn}' (must start with uppercase to be accessible)")
+
+        return len(self.type_errors) == 0
+
     def generate_report(self) -> ValidationReport:
         """Generate a validation report."""
         return ValidationReport(
@@ -182,6 +227,8 @@ def generate_module_tests(chunk_files: List[Path], target_lang: str = "typescrip
         return _generate_python_tests(chunk_files)
     elif target_lang == "rust":
         return _generate_rust_tests(chunk_files)
+    elif target_lang in ("go", "golang"):
+        return _generate_go_tests(chunk_files)
 
     return "# Tests not supported for this language"
 
@@ -355,6 +402,57 @@ def _generate_rust_tests(chunk_files: List[Path]) -> str:
     return "\n".join(test_lines)
 
 
+def _generate_go_tests(chunk_files: List[Path]) -> str:
+    """Generate Go tests using go test naming conventions."""
+    test_lines = [
+        "// Auto-generated tests",
+        "package main",
+        "",
+        'import "testing"',
+        "",
+    ]
+
+    modules: dict[str, List[Path]] = {}
+    for f in chunk_files:
+        module_name = f.stem
+        if module_name not in modules:
+            modules[module_name] = []
+        modules[module_name].append(f)
+
+    for module_name, files in modules.items():
+        for file in files:
+            content = file.read_text()
+
+            # Find exported functions (capitalized)
+            func_pattern = r"^func ([A-Z]\w*) \("
+            matches = re.findall(func_pattern, content, re.MULTILINE)
+
+            for func_name in matches:
+                test_lines.append(f"func Test{func_name}(t *testing.T) {{")
+                test_lines.append(f"    // TODO: Test {func_name}")
+                test_lines.append(f"    t.Log(\"%s not yet tested\", func_name)")
+                test_lines.append("}")
+                test_lines.append("")
+
+            # Find exported types
+            type_pattern = r"^type ([A-Z]\w*) struct"
+            type_matches = re.findall(type_pattern, content, re.MULTILINE)
+            for type_name in type_matches:
+                test_lines.append(f"func TestNew{type_name}(t *testing.T) {{")
+                test_lines.append(f"    // TODO: Test {type_name} constructor")
+                test_lines.append(f"    t.Log(\"New%s not yet tested\", type_name)")
+                test_lines.append("}")
+                test_lines.append("")
+
+    test_lines.append("func TestIntegration(t *testing.T) {")
+    test_lines.append("    // TODO: Add integration test")
+    test_lines.append("    t.Log(\"Integration test not yet implemented\")")
+    test_lines.append("}")
+    test_lines.append("")
+
+    return "\n".join(test_lines)
+
+
 class PipelineCoordinator:
     """Coordinates the full transpilation pipeline with multi-pass refinement."""
 
@@ -379,8 +477,9 @@ class PipelineCoordinator:
         chunk: Chunk,
         repo_path: Path,
         language: str,
-        output_dir: Optional[Path] = None
-    ) -> str:
+        output_dir: Optional[Path] = None,
+        validate: bool = True,
+    ) -> Tuple[str, ValidationResult]:
         """Transpile a single chunk.
 
         Args:
@@ -390,7 +489,7 @@ class PipelineCoordinator:
             output_dir: Optional output directory
 
         Returns:
-            Transpiled code for this chunk
+            Tuple of (transpiled_code, ValidationResult)
         """
         from repo_transmute.blueprint.extractor import extract_from_python, extract_classes_from_python
 
@@ -406,6 +505,17 @@ class PipelineCoordinator:
                     from repo_transmute.blueprint.extractor import extract_from_javascript, extract_from_typescript
                     extractor = extract_from_typescript if language == "typescript" else extract_from_javascript
                     functions.extend(extractor(file_path))
+                elif language == "go":
+                    from repo_transmute.transpiler.go_parser import (
+                        extract_from_go,
+                        extract_structs_from_go,
+                        extract_interfaces_from_go,
+                    )
+                    funcs = extract_from_go(file_path)
+                    # Filter out methods (they're attached to structs)
+                    functions.extend([f for f in funcs if not getattr(f, '_is_method', False)])
+                    data_structures.extend(extract_structs_from_go(file_path))
+                    data_structures.extend(extract_interfaces_from_go(file_path))
             except Exception as e:
                 print(f"Warning: Could not extract from {file_path}: {e}")
                 continue
@@ -462,8 +572,16 @@ class PipelineCoordinator:
         try:
             yaml.dump(blueprint_data, tmp_file)
             tmp_file.close()
-            code = self.transpiler.transpile(tmp_path, self.target_lang, output_dir)
-            return code
+            raw_result = self.transpiler.transpile(tmp_path, self.target_lang, output_dir)
+            # Handle both real tuple return (when Transpiler.transpile was used)
+            # and test mock string return (when a bare function was substituted)
+            if isinstance(raw_result, tuple):
+                code, validation_result = raw_result
+            else:
+                code = raw_result
+                from repo_transmute.transpiler.validate import ValidationResult
+                validation_result = ValidationResult(success=True, output="mocked")
+            return code, validation_result
         finally:
             tmp_path.unlink(missing_ok=True)
 
@@ -509,7 +627,12 @@ class PipelineCoordinator:
             tmp_file.close()
 
             # Pass 1: Initial transpilation
-            code = self.transpiler.transpile(tmp_path, self.target_lang, output_dir)
+            transpile_result = self.transpiler.transpile(tmp_path, self.target_lang, output_dir)
+            # transpile() returns Tuple[str, ValidationResult]; unpack
+            if isinstance(transpile_result, tuple):
+                code, _ = transpile_result
+            else:
+                code = transpile_result
             self.results.append(code)
 
             # Validate and refine
@@ -567,7 +690,7 @@ Requirements:
         language: str,
         output_dir: Optional[Path] = None,
         progress_callback: Optional[callable] = None
-    ) -> Tuple[str, int, int, List[str]]:
+    ) -> Tuple[str, int, int, List[str], List[Tuple[int, str]]]:
         """Transpile all chunks from a repository.
 
         Args:
@@ -577,7 +700,10 @@ Requirements:
             progress_callback: Optional callback for progress updates
 
         Returns:
-            Tuple of (combined_transpiled_code, chunks_processed, total_chunks, written_paths)
+            Tuple of (combined_transpiled_code, chunks_processed, total_chunks,
+                      written_paths, failed_chunks).
+            failed_chunks is a list of (chunk_id, error_message) for chunks
+            where ValidationResult.success == False.
         """
         print(f"Chunking repository: {repo_path.name}")
 
@@ -589,6 +715,7 @@ Requirements:
         reassembler = Reassembler(chunks, repo_path)
         chunk_order = reassembler.get_chunk_order()
         chunks_processed = 0
+        failed_chunks: List[Tuple[int, str]] = []
 
         for idx, chunk_id in enumerate(tqdm(chunk_order, desc="Transpiling chunks", unit="chunk")):
             chunk = chunks[chunk_id]
@@ -607,7 +734,7 @@ Requirements:
             print(f"  Transpiling chunk {idx + 1}/{total_chunks} (id={chunk_id}): {len(chunk.files)} files — {[f.name for f in chunk.files]}")
 
             try:
-                transpiled_code = self.transpile_chunk(
+                transpiled_code, chunk_vr = self.transpile_chunk(
                     chunk=chunk,
                     repo_path=repo_path,
                     language=language,
@@ -618,9 +745,16 @@ Requirements:
                 progress.status = "completed"
                 chunks_processed += 1
 
+                # Track validation failures — fail the pipeline if validation failed
+                if not chunk_vr.success:
+                    progress.status = "failed"
+                    progress.error = f"Validation failed: {chunk_vr.error}"
+                    failed_chunks.append((chunk_id, chunk_vr.error))
+
             except Exception as e:
                 progress.status = "failed"
                 progress.error = str(e)
+                failed_chunks.append((chunk_id, str(e)))
                 continue
 
         # Combine all transpiled chunks
@@ -637,7 +771,7 @@ Requirements:
         )
         written_paths = [str(p) for p in written_files.values()]
 
-        return resolved_code, chunks_processed, total_chunks, written_paths
+        return resolved_code, chunks_processed, total_chunks, written_paths, failed_chunks
 
     def run_full_pipeline(
         self,
@@ -679,8 +813,14 @@ Requirements:
             # Extract full blueprint (for metadata)
             blueprint = extract_all(repo_path, language)
 
-            # Step 2: Transpile ALL chunks
-            transpiled_code, chunks_processed, total_chunks, written_paths = self.transpile_all_chunks(
+            # Step 2: Transpile ALL chunks (now returns failed_chunks)
+            (
+                transpiled_code,
+                chunks_processed,
+                total_chunks,
+                written_paths,
+                failed_chunks,
+            ) = self.transpile_all_chunks(
                 repo_path=repo_path,
                 language=language,
                 output_dir=output_dir,
@@ -698,7 +838,59 @@ Requirements:
             else:
                 tests = "# No output files found for test generation - chunks processed individually"
 
-            # Step 4: Validate
+            # Step 4: Fail the pipeline if any chunk had validation failures
+            if failed_chunks:
+                error_msgs = [f"chunk {cid}: {err}" for cid, err in failed_chunks[:3]]
+                validation_report = ValidationReport(
+                    import_valid=False,
+                    type_valid=False,
+                    errors=[f"Chunk validation failed: {err}" for _, err in failed_chunks],
+                    warnings=[]
+                )
+                return PipelineResult(
+                    success=False,
+                    transpiled_code=transpiled_code,
+                    tests=tests,
+                    validation=validation_report,
+                    passes_run=len(self.results),
+                    chunks_processed=chunks_processed,
+                    total_chunks=total_chunks,
+                    files_written=written_paths,
+                    error=f"Chunk validation failed: {'; '.join(error_msgs)}"
+                )
+
+            # Step 5: Real-tool validation of written files
+            real_validation_errors = []
+            real_validation_warnings = []
+
+            for written_path in written_paths:
+                p = Path(written_path)
+                if p.exists() and p.suffix in ('.ts', '.js', '.rs', '.go', '.py'):
+                    vr = real_validate(p, self.target_lang)
+                    if not vr.success:
+                        real_validation_errors.append(f"{p.name}: {vr.error}")
+                    elif vr.output:
+                        real_validation_warnings.append(f"{p.name}: {vr.output}")
+
+            if real_validation_errors:
+                validation_report = ValidationReport(
+                    import_valid=False,
+                    type_valid=False,
+                    errors=real_validation_errors,
+                    warnings=real_validation_warnings
+                )
+                return PipelineResult(
+                    success=False,
+                    transpiled_code=transpiled_code,
+                    tests=tests,
+                    validation=validation_report,
+                    passes_run=len(self.results),
+                    chunks_processed=chunks_processed,
+                    total_chunks=total_chunks,
+                    files_written=written_paths,
+                    error="Real-tool validation failed: " + "; ".join(real_validation_errors[:3])
+                )
+
             self.validator.validate_imports(transpiled_code)
             self.validator.validate_types(transpiled_code)
             validation_report = self.validator.generate_report()
@@ -728,6 +920,7 @@ Requirements:
             "javascript": "js",
             "rust": "rs",
             "python": "py",
+            "go": "go",
         }
         return ext_map.get(self.target_lang, "txt")
 
@@ -803,11 +996,3 @@ def analyze_dependencies(repo_path: Path) -> dict:
         else:
             stdlib = {"os", "sys", "re", "json", "typing", "pathlib", "asyncio"}
             if imp.split(".")[0] not in stdlib:
-                deps["external"].add(imp)
-            else:
-                deps["internal"].add(imp)
-
-    deps["external"] = list(deps["external"])
-    deps["internal"] = list(deps["internal"])
-
-    return deps
