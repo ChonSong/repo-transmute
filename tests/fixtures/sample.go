@@ -45,3 +45,12 @@ type ReadWriter interface {
 func (p *Person) Greet() string {
 	return fmt.Sprintf("Hi, I'm %s", p.Name)
 }
+
+// Sum adds up all the numbers in the slice.
+func (p *Person) Sum(nums []int) int {
+	sum := 0
+	for _, n := range nums {
+		sum += n
+	}
+	return sum
+}

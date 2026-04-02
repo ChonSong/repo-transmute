@@ -177,15 +177,17 @@ def _find_brace_pair(content: str, start: int) -> Tuple[int, int]:
     return start, -1  # no match found
 
 
-def _extract_go_function_bodies(content: str) -> dict:
+def _extract_go_function_bodies(content: str) -> List[dict]:
     """Extract all top-level function definitions with full bodies.
 
     Scans raw content line-by-line to avoid comment-stripping position mapping issues.
 
-    Returns dict mapping function name -> dict with keys:
+    Returns list of dicts with keys:
       name, signature, line, body, docstring, is_method, receiver
+    Each entry has a unique key so duplicate function names (e.g. top-level func
+    and method with same name) are preserved rather than silently overwriting.
     """
-    results = {}
+    results: List[dict] = []
     lines = content.splitlines()
 
     # We need to find func declarations and track brace depth across lines.
@@ -279,7 +281,7 @@ def _extract_go_function_bodies(content: str) -> dict:
             i += 1
             continue
 
-        body = content[body_start:body_end + 1]
+        body = content[body_start:body_end]
 
         # Line number of the func keyword
         line_number = func_start_line + 1  # 1-indexed
@@ -298,7 +300,7 @@ def _extract_go_function_bodies(content: str) -> dict:
         if doc_lines:
             docstring = "\n".join(reversed(doc_lines))
 
-        results[name] = {
+        results.append({
             "name": name,
             "signature": signature,
             "line": line_number,
@@ -306,7 +308,7 @@ def _extract_go_function_bodies(content: str) -> dict:
             "docstring": docstring,
             "is_method": receiver is not None,
             "receiver": receiver,
-        }
+        })
 
         # Move past this function's closing brace line
         closing_line = content[:body_end].count("\n")
@@ -316,7 +318,10 @@ def _extract_go_function_bodies(content: str) -> dict:
 
 
 def _extract_go_docstring(prefix: str) -> Optional[str]:
-    """Extract a leading doc comment from the lines preceding a declaration."""
+    """Extract a leading doc comment from the lines preceding a declaration.
+
+    This standalone helper exists for unit testing only.
+    """
     lines = prefix.splitlines()
     doc_lines = []
     for line in reversed(lines):
@@ -326,7 +331,7 @@ def _extract_go_docstring(prefix: str) -> Optional[str]:
         elif stripped == "":
             continue
         else:
-            break
+            continue
     if doc_lines:
         return "\n".join(reversed(doc_lines))
     return None
@@ -455,27 +460,33 @@ def extract_from_go(file_path: Path) -> List[Function]:
                 timeout=30,
             )
             data = _parse_goast_output(result.stdout)
-            functions = []
-            for f in data.get("functions", []):
-                if f.get("is_method"):
-                    continue
-                functions.append(
-                    Function(
-                        name=f["name"],
-                        signature=f.get("signature", ""),
-                        file=str(file_path),
-                        line=f.get("line", 0),
-                        docstring=f.get("doc", "").strip() or None,
+
+            # Check if goast provides body info; if not, fall back to pure-Python
+            funcs_data = data.get("functions", [])
+            has_bodies = any(f.get("body") for f in funcs_data)
+
+            if has_bodies:
+                functions = []
+                for f in funcs_data:
+                    if f.get("is_method"):
+                        continue
+                    functions.append(
+                        Function(
+                            name=f["name"],
+                            signature=f.get("signature", ""),
+                            file=str(file_path),
+                            line=f.get("line", 0),
+                            docstring=f.get("doc", "").strip() or None,
+                            body=f.get("body", ""),
+                        )
                     )
-                )
-            return functions
+                return functions
         except Exception:
             pass
 
     # Pure-Python fallback — extracts full bodies
     funcs = []
-    funcs_by_name = _extract_go_function_bodies(content)
-    for name, info in funcs_by_name.items():
+    for info in _extract_go_function_bodies(content):
         if info["is_method"]:
             # Skip methods — they're attached to structs
             continue

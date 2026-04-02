@@ -32,6 +32,17 @@ def goast_exists():
     return _find_goast() is not None
 
 
+def _by_name(results):
+    """Build a dict from the list of results, preferring non-method entries."""
+    out = {}
+    for r in results:
+        name = r["name"]
+        # Don't overwrite a top-level function with a method of the same name
+        if name not in out or r["is_method"]:
+            out[name] = r
+    return out
+
+
 # ---------------------------------------------------------------------------
 # _parse_goast_output
 # ---------------------------------------------------------------------------
@@ -172,95 +183,118 @@ class TestExtractGoFunctionBodies:
     def test_extracts_function_name(self):
         content = 'func Add(a, b int) int { return a + b }'
         funcs = _extract_go_function_bodies(content)
-        assert "Add" in funcs
-        assert funcs["Add"]["name"] == "Add"
+        by_name = _by_name(funcs)
+        assert "Add" in by_name
+        assert by_name["Add"]["name"] == "Add"
 
     def test_extracts_signature(self):
         content = 'func Add(a, b int) int { return a + b }'
         funcs = _extract_go_function_bodies(content)
-        assert "Add" in funcs
-        assert "(a, b int)" in funcs["Add"]["signature"]
+        by_name = _by_name(funcs)
+        assert "Add" in by_name
+        assert "(a, b int)" in by_name["Add"]["signature"]
 
     def test_extracts_body(self):
         content = 'func Add(a, b int) int { return a + b }'
         funcs = _extract_go_function_bodies(content)
-        assert "Add" in funcs
-        body = funcs["Add"]["body"].strip()
+        by_name = _by_name(funcs)
+        assert "Add" in by_name
+        body = by_name["Add"]["body"].strip()
         assert "return a + b" in body
 
     def test_extracts_method_receiver(self):
         content = 'func (p *Person) Greet() string { return "hi" }'
         funcs = _extract_go_function_bodies(content)
-        assert "Greet" in funcs
-        assert funcs["Greet"]["is_method"] is True
-        assert "p *Person" in funcs["Greet"]["receiver"]
+        by_name = _by_name(funcs)
+        assert "Greet" in by_name
+        assert by_name["Greet"]["is_method"] is True
+        assert "p *Person" in by_name["Greet"]["receiver"]
 
-    def test_skips_methods_on_structs(self):
-        content = 'func (p *Person) Greet() string { return "hi" }'
+    def test_preserves_both_top_level_and_method_with_same_name(self):
+        """When a top-level func and method share a name, both are in the list."""
+        content = 'func Greet(name string) string { return name }\nfunc (p *Person) Greet() string { return "hi" }'
         funcs = _extract_go_function_bodies(content)
-        assert funcs["Greet"]["is_method"] is True
+        greet_funcs = [f for f in funcs if f["name"] == "Greet"]
+        assert len(greet_funcs) == 2
+        assert any(f["is_method"] is False for f in greet_funcs)
+        assert any(f["is_method"] is True for f in greet_funcs)
 
     def test_extracts_docstring(self):
         content = '// Add returns the sum.\nfunc Add(a, b int) int { return a + b }'
         funcs = _extract_go_function_bodies(content)
-        assert "Add" in funcs
-        assert funcs["Add"]["docstring"] is not None
-        assert "sum" in funcs["Add"]["docstring"]
+        by_name = _by_name(funcs)
+        assert "Add" in by_name
+        assert by_name["Add"]["docstring"] is not None
+        assert "sum" in by_name["Add"]["docstring"]
 
     def test_handles_nested_braces(self):
         content = 'func outer() { if true { if true { return 1; } } return 0; }'
         funcs = _extract_go_function_bodies(content)
-        assert "outer" in funcs
-        assert funcs["outer"]["body"].count("{") == funcs["outer"]["body"].count("}")
+        by_name = _by_name(funcs)
+        assert "outer" in by_name
+        assert by_name["outer"]["body"].count("{") == by_name["outer"]["body"].count("}")
 
     def test_handles_string_with_braces(self):
         content = 'func WithBraces() string { return "{something}"; }'
         funcs = _extract_go_function_bodies(content)
-        assert "WithBraces" in funcs
-        assert "{something}" in funcs["WithBraces"]["body"]
+        by_name = _by_name(funcs)
+        assert "WithBraces" in by_name
+        assert "{something}" in by_name["WithBraces"]["body"]
 
     def test_handles_raw_string_with_braces(self):
         content = "func RawBraces() string { return `{\"key\": \"value\"}`; }"
         funcs = _extract_go_function_bodies(content)
-        assert "RawBraces" in funcs
+        by_name = _by_name(funcs)
+        assert "RawBraces" in by_name
         # The raw string contains the braces
-        assert "{" in funcs["RawBraces"]["body"]
+        assert "{" in by_name["RawBraces"]["body"]
 
     def test_extracts_multiple_functions(self):
         funcs = _extract_go_function_bodies(FIXTURE.read_text())
-        assert "Add" in funcs
-        assert "Greet" in funcs
-        assert funcs["Add"]["body"].strip() != ""
-        assert funcs["Greet"]["body"].strip() != ""
+        by_name = _by_name(funcs)
+        assert "Add" in by_name
+        assert "Greet" in by_name
+        assert by_name["Add"]["body"].strip() != ""
+        assert by_name["Greet"]["body"].strip() != ""
 
     def test_extracts_functions_from_complex_fixture(self):
         funcs = _extract_go_function_bodies(FIXTURE_COMPLEX.read_text())
-        assert "Add" in funcs
-        assert "Greet" in funcs
-        assert "ProcessWithCallback" in funcs
-        assert "WithDefaults" in funcs
-        assert "StringWithBraces" in funcs
-        assert "MultiLineString" in funcs
+        by_name = _by_name(funcs)
+        assert "Add" in by_name
+        assert "Greet" in by_name
+        assert "ProcessWithCallback" in by_name
+        assert "WithDefaults" in by_name
+        assert "StringWithBraces" in by_name
+        assert "MultiLineString" in by_name
 
         # Verify bodies are populated
-        assert funcs["Add"]["body"].strip() != ""
-        assert "return a + b" in funcs["Add"]["body"]
+        assert by_name["Add"]["body"].strip() != ""
+        assert "return a + b" in by_name["Add"]["body"]
 
-        # Verify method detection
-        assert funcs["Greet"]["is_method"] is True
-        assert "p *Person" in funcs["Greet"]["receiver"]
+        # Verify method detection — Greet on Person is a method
+        assert by_name["Greet"]["is_method"] is True
+        assert "p *Person" in by_name["Greet"]["receiver"]
 
     def test_multiline_method_body(self):
         funcs = _extract_go_function_bodies(FIXTURE_COMPLEX.read_text())
-        assert "LongMethod" in funcs
-        body = funcs["LongMethod"]["body"]
+        by_name = _by_name(funcs)
+        assert "LongMethod" in by_name
+        body = by_name["LongMethod"]["body"]
         # Should contain nested if/for structures
         assert "for _, s := range input" in body
         assert "for i := 0; i < len(s); i++" in body
 
+    def test_no_duplicate_keys_with_same_name(self):
+        """Results is a list — no dict key collision possible."""
+        content = 'func Greet() string { return "hi" }\nfunc Greet() string { return "ho" }'
+        funcs = _extract_go_function_bodies(content)
+        # Both functions preserved in list
+        assert len(funcs) == 2
+        assert all(f["name"] == "Greet" for f in funcs)
+
 
 # ---------------------------------------------------------------------------
-# _extract_go_docstring
+# _extract_go_docstring — standalone helper for external use
 # ---------------------------------------------------------------------------
 
 class TestExtractGoDocstring:

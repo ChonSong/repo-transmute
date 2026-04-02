@@ -996,3 +996,4 @@ def analyze_dependencies(repo_path: Path) -> dict:
         else:
             stdlib = {"os", "sys", "re", "json", "typing", "pathlib", "asyncio"}
             if imp.split(".")[0] not in stdlib:
+                deps["third_party"].add(imp.split(".")[0])

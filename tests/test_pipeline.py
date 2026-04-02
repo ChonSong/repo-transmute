@@ -618,7 +618,7 @@ class TestPipelineCoordinatorWriteFiles:
 
         Reassembler.write_files = capturing_write_files
         try:
-            combined, processed, total, written = coord.transpile_all_chunks(
+            combined, processed, total, written, failed = coord.transpile_all_chunks(
                 repo_path=tmp_path,
                 language="python",
                 output_dir=tmp_path / "out"
@@ -639,7 +639,7 @@ class TestPipelineCoordinatorWriteFiles:
             "// filename: test.ts\nexport function test(): void { }"
         )
 
-        combined, processed, total, written = coord.transpile_all_chunks(
+        combined, processed, total, written, failed = coord.transpile_all_chunks(
             repo_path=tmp_path,
             language="python",
             output_dir=None
@@ -691,7 +691,7 @@ class TestPipelineCoordinatorWriteFiles:
 
         Reassembler.write_files = capturing_write_files
         try:
-            combined, processed, total, written = coord.transpile_all_chunks(
+            combined, processed, total, written, failed = coord.transpile_all_chunks(
                 repo_path=tmp_path,
                 language="python",
                 output_dir=tmp_path / "out"

@@ -189,7 +189,7 @@ class TestTranspileAllChunksRealExtraction:
 
         coord.transpiler.transpile = tracking_transpile
 
-        combined, processed, total, written = coord.transpile_all_chunks(
+        combined, processed, total, written, failed = coord.transpile_all_chunks(
             repo_path=twint_repo,
             language="python",
             output_dir=None,
@@ -210,7 +210,7 @@ class TestTranspileAllChunksRealExtraction:
         )
 
         output_dir = tmp_path / "out"
-        combined, processed, total, written = coord.transpile_all_chunks(
+        combined, processed, total, written, failed = coord.transpile_all_chunks(
             repo_path=twint_repo,
             language="python",
             output_dir=output_dir,
@@ -252,8 +252,8 @@ class TestTranspileAllChunksRealExtraction:
         )
 
         assert isinstance(result, tuple), f"Expected tuple, got {type(result)}"
-        assert len(result) == 4, f"Expected 4-tuple, got {len(result)}-tuple"
-        combined, processed, total, written = result
+        assert len(result) == 5, f"Expected 5-tuple, got {len(result)}-tuple"
+        combined, processed, total, written, failed = result
         assert isinstance(combined, str)
         assert isinstance(processed, int)
         assert isinstance(total, int)
@@ -279,7 +279,7 @@ class TestReassemblerEndToEnd:
         coord.transpiler.transpile = per_chunk_transpile
 
         output_dir = tmp_path / "out"
-        combined, processed, total, written = coord.transpile_all_chunks(
+        combined, processed, total, written, failed = coord.transpile_all_chunks(
             repo_path=twint_repo,
             language="python",
             output_dir=output_dir,

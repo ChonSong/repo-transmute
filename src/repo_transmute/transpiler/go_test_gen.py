@@ -58,7 +58,7 @@ def _suggest_imports(func_info: dict) -> List[str]:
     ret_type = ""
     if ")" in sig:
         # signature is like "(a int) string" or "(a int)" for no return
-        paren_end = sig.rindex(")")
+        paren_end = sig.index(")")
         ret_type = sig[paren_end + 1:].strip()
 
     if ret_type and ret_type != "":
@@ -82,6 +82,29 @@ def _suggest_imports(func_info: dict) -> List[str]:
         suggestions.add("encoding/json")
 
     return sorted(suggestions)
+
+
+def _funcs_as_dict(funcs_list: List[dict]) -> Dict[str, dict]:
+    """Convert list from _extract_go_function_bodies to name->info dict.
+
+    Uses a composite key (name + is_method flag) so both top-level functions
+    and methods with the same name are preserved.
+    """
+    out: Dict[str, dict] = {}
+    for info in funcs_list:
+        name = info["name"]
+        is_method = info.get("is_method", False)
+        # Composite key: "name" for top-level, "name+method" for methods
+        key = name if not is_method else f"{name}+method"
+        if key not in out:
+            out[key] = info
+        else:
+            # Keep the one with lower line number
+            existing_line = out[key].get("line", float("inf"))
+            new_line = info.get("line", float("inf"))
+            if new_line < existing_line:
+                out[key] = info
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -108,11 +131,14 @@ def generate_test_stub(func_info: dict, target_pkg: str = "fixtures") -> str:
     param_names = _param_names(sig)
 
     # Parse return type from signature
-    # sig is like "(a, b int) int" or "(a, b int)" for no return
+    # sig is like "(a, b int) int" or "(a, b int) (int, error)" for multi-return
     ret_type = ""
     if ")" in sig:
-        paren_end = sig.rindex(")")
+        paren_end = sig.index(")")
         ret_type = sig[paren_end + 1:].strip()
+    
+    # Check if error is in return types (for multi-return like (int, error))
+    returns_error = "error" in ret_type
 
     # Build the test function signature
     if is_method:
@@ -171,7 +197,7 @@ def generate_test_stub(func_info: dict, target_pkg: str = "fixtures") -> str:
     lines.append("")
 
     # Add assertion
-    if ret_type == "error":
+    if ret_type == "error" or returns_error:
         lines.append("    if got != nil {")
         lines.append(f'        t.Errorf("{name}() error = %v, want nil", got)')
         lines.append("    }")
@@ -186,6 +212,20 @@ def generate_test_stub(func_info: dict, target_pkg: str = "fixtures") -> str:
     lines.append("}")
 
     return "\n".join(lines)
+
+
+def _has_testing_import(lines: List[str]) -> bool:
+    """Check if the import block already includes testing."""
+    # Look for 'import (' ... 'testing' ... ')'
+    in_import_block = False
+    for line in lines:
+        if line == "import (":
+            in_import_block = True
+        elif in_import_block and line == ")":
+            break
+        elif in_import_block and "testing" in line:
+            return True
+    return False
 
 
 def generate_test_file(
@@ -204,7 +244,8 @@ def generate_test_file(
     """
     content = file_path.read_text()
     pkg_name = _detect_package_name(content)
-    all_funcs = _extract_go_function_bodies(content)
+    all_funcs_list = _extract_go_function_bodies(content)
+    all_funcs = _funcs_as_dict(all_funcs_list)
 
     # Filter to top-level functions (not methods) that we want to test
     top_level = {
@@ -225,7 +266,7 @@ def generate_test_file(
     # Build import block
     import_lines = ['"testing"']
     if needed_imports:
-        import_lines.append(f'"{pkg_name}\"  // TODO: replace with actual import path')
+        import_lines.append(f'"{pkg_name}"  // TODO: replace with actual import path')
         # Also suggest common test imports
         for pkg in ["fmt", "errors", "reflect"]:
             if not _needs_import(all_imports, pkg):
@@ -250,8 +291,8 @@ def generate_test_file(
         else:
             lines.append(f'    "{path}"')
 
-    # Add testing import
-    if '"testing"' not in import_lines:
+    # Add testing import if not already present
+    if not _has_testing_import(lines):
         lines.append('    "testing"')
 
     lines.append(")")
@@ -283,13 +324,14 @@ def generate_test_file_for_methods(
     """
     content = file_path.read_text()
     pkg_name = _detect_package_name(content)
-    all_funcs = _extract_go_function_bodies(content)
+    all_funcs_list = _extract_go_function_bodies(content)
+    all_funcs = _funcs_as_dict(all_funcs_list)
 
     # Filter to methods on the given struct
     methods = {
         name: info
         for name, info in all_funcs.items()
-        if info["is_method"] and info.get("receiver", "").endswith(struct_name)
+        if info["is_method"] and struct_name in info.get("receiver", "")
     }
 
     if not methods:
@@ -306,9 +348,74 @@ def generate_test_file_for_methods(
     ]
 
     for method_name, method_info in sorted(methods.items()):
-        stub = generate_test_stub(method_info, target_pkg=target_pkg)
+        stub = generate_test_stub_method(method_info, target_pkg=target_pkg)
         lines.append(stub)
         lines.append("")
+
+    return "\n".join(lines)
+
+
+def generate_test_stub_method(func_info: dict, target_pkg: str = "fixtures") -> str:
+    """Generate a Go test stub for a method (with receiver instance setup)."""
+    name = func_info["name"]
+    sig = func_info["signature"]
+    receiver = func_info.get("receiver", "")
+
+    test_name = _to_test_name(name)
+    param_names = _param_names(sig)
+
+    # Parse return type from signature
+    ret_type = ""
+    if ")" in sig:
+        paren_end = sig.index(")")
+        ret_type = sig[paren_end + 1:].strip()
+    
+    # Check if error is in return types (for multi-return like (int, error))
+    returns_error = "error" in ret_type
+
+    # Extract receiver type
+    recv_type = receiver.split()[-1] if receiver else "Unknown"
+
+    lines = [
+        f"// Test for {name} (method on {receiver})",
+        f"func {test_name}(t *testing.T) {{",
+    ]
+
+    # Initialize receiver
+    lines.append(f"    // receiver := &{recv_type}{{}}  // TODO: initialize receiver")
+    lines.append("")
+
+    # Add param placeholders
+    for pname in param_names:
+        lines.append(f"    // var {pname} = <value>")
+
+    if ret_type and ret_type != "error" and ret_type != "":
+        lines.append(f"    var want {ret_type}")
+        lines.append(f"    // TODO: set want = expected value")
+
+    # Call the method
+    if param_names:
+        params_str = ", ".join(f"<{p}>" for p in param_names)
+        call = f"    got := receiver.{name}({params_str})"
+    else:
+        call = f"    got := receiver.{name}()"
+
+    lines.append(f"    {call}")
+    lines.append("")
+
+    # Add assertion
+    if ret_type == "error" or returns_error:
+        lines.append("    if got != nil {")
+        lines.append(f'        t.Errorf("{name}() error = %v, want nil", got)')
+        lines.append("    }")
+    elif ret_type and ret_type != "":
+        lines.append("    if got != want {")
+        lines.append(f'        t.Errorf("{name}() = %v, want %v", got, want)')
+        lines.append("    }")
+    else:
+        lines.append("    // TODO: add assertions")
+
+    lines.append("}")
 
     return "\n".join(lines)
 
@@ -347,7 +454,8 @@ def write_test_files(
 
     for f in go_files:
         content = f.read_text()
-        funcs = _extract_go_function_bodies(content)
+        funcs_list = _extract_go_function_bodies(content)
+        funcs = _funcs_as_dict(funcs_list)
         top_funcs = [n for n, info in funcs.items() if not info["is_method"]]
         if top_funcs:
             file_funcs[f] = top_funcs
