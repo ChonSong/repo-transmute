@@ -365,17 +365,36 @@ def _extract_js_arrow_params(left: str) -> tuple:
     return name, params.strip(), is_async
 
 
+def _extract_named_exports(stripped: str) -> List[str]:
+    """Extract all exported names from 'export { a, b, c }' or 'export { a as b }'."""
+    m = re.match(r'^\s*export\s+\{\s*(.*?)\s*\}', stripped)
+    if not m:
+        return []
+    names = []
+    for part in m.group(1).split(','):
+        part = part.strip()
+        # Handle 'export { foo as bar }' — name is the alias
+        if ' as ' in part:
+            part = part.split(' as ', 1)[1].strip()
+        names.append(part)
+    return names
+
+
 def extract_from_javascript(file_path: Path) -> List[Function]:
     """Extract functions from JavaScript/TypeScript/JSX/TSX.
     
     Handles:
       - function declarations:        function name(params) { ... }
+                                     function name(params): retType { ... }
       - export function:              export function name(params) { ... }
       - export default function:      export default function name(params) { ... }
       - export default function():     export default function(params) { ... }
       - arrow functions (block):       const name = async (params) => { ... }
       - arrow functions (expr):        const name = (params) => expr
-      - named export:                  export { name }
+      - named export:                  export { name } / export { name as alias }
+    
+    Note: TypeScript type annotations (params: type) and return types (): retType
+    are included as-is in the signature string.
     """
     content = file_path.read_text()
     lines = content.split('\n')
@@ -390,67 +409,35 @@ def extract_from_javascript(file_path: Path) -> List[Function]:
         'constructor', 'get', 'set', 'default',
     }
     
-    # Regex patterns for single-line detection
-    FUNC_DECL_RE = re.compile(
-        r'^(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\((.*?)\)\s*(?:=>)?\s*\{'
-    )
-    EXPORT_DEFAULT_FUNC_RE = re.compile(
-        r'^(?:export\s+)?export\s+default\s+(?:async\s+)?function\s*(?:\w+)?\s*\((.*?)\)\s*\{'
-    )
-    NAMED_EXPORT_RE = re.compile(r'^\s*export\s+\{\s*(\w+)')
+    # ── Pre-compile patterns for speed ──────────────────────────────────────
+    # Named exports: export { a, b } or export { a as b }
+    NAMED_EXPORT_RE = re.compile(r'^\s*export\s+\{\s*(.*?)\s*\}')
     
     for i, line in enumerate(lines):
         stripped = line.strip()
         if not stripped or stripped.startswith('//') or stripped.startswith('/*'):
             continue
         
-        # --- function declarations: function name(params) { ---
-        m = FUNC_DECL_RE.match(stripped)
-        if m:
-            name, params = m.group(1), m.group(2) or ""
-            if name not in keywords:
-                functions.append(Function(
-                    name=name,
-                    signature=f"({params})",
-                    file=str(file_path),
-                    line=i + 1,
-                    async_flag="async" in stripped,
-                ))
+        # ── Named exports: export { a, b, c } or export { a as b } ─────────
+        if stripped.startswith('export') and '{' in stripped and '}' in stripped:
+            m_ne = NAMED_EXPORT_RE.match(stripped)
+            if m_ne:
+                for part in m_ne.group(1).split(','):
+                    part = part.strip()
+                    if ' as ' in part:
+                        name = part.split(' as ', 1)[1].strip()
+                    else:
+                        name = part
+                    if name and name not in keywords:
+                        functions.append(Function(
+                            name=name,
+                            signature="()",
+                            file=str(file_path),
+                            line=i + 1,
+                        ))
                 continue
         
-        # --- export default function(params) { ---
-        m = EXPORT_DEFAULT_FUNC_RE.match(stripped)
-        if m:
-            params = m.group(1) or ""
-            functions.append(Function(
-                name='<default>',
-                signature=f"({params})",
-                file=str(file_path),
-                line=i + 1,
-                async_flag="async" in stripped,
-            ))
-            continue
-        
-        # --- export { name } ---
-        m = NAMED_EXPORT_RE.match(stripped)
-        if m:
-            name = m.group(1)
-            if name not in keywords:
-                functions.append(Function(
-                    name=name,
-                    signature="()",
-                    file=str(file_path),
-                    line=i + 1,
-                ))
-                continue
-        
-        # --- Class declarations: class Name { ... } or export class Name ---
-        # Handled via _extract_js_arrow_params:
-        #   const f = (x) => {         → block body
-        #   const f = async (x) => {   → block body
-        #   const f = (x) => expr       → expr body (single line)
-        #   const f = async () => {     → bare async
-        # Skips HOF callbacks (e.g. useMemo(() => {) where parens are unbalanced.
+        # ── Arrow functions: const name = (params) => { ... } ──────────────
         if '=>' in stripped:
             left = stripped.split('=>', 1)[0] + '=>'
             name, params, is_async = _extract_js_arrow_params(left)
@@ -462,6 +449,43 @@ def extract_from_javascript(file_path: Path) -> List[Function]:
                     line=i + 1,
                     async_flag=is_async,
                 ))
+            continue
+        
+        # ── Function declarations: function name(...), export function, etc. ─
+        # Handles both JS and TS: allows type annotations between ) and {
+        # e.g. function greet(name: string): string {
+        m = re.match(
+            r'^(?:export\s+)?(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)\s*(?::\s*\S+.*?)?\{',
+            stripped
+        )
+        if m:
+            name, params = m.group(1), m.group(2) or ""
+            if name not in keywords:
+                functions.append(Function(
+                    name=name,
+                    signature=f"({params})",
+                    file=str(file_path),
+                    line=i + 1,
+                    async_flag=bool(re.search(r'\basync\b', stripped)),
+                ))
+            continue
+        
+        # ── export default function [name](params) { ─────────────────────────
+        m = re.match(
+            r'^(?:export\s+)?export\s+default\s+(?:async\s+)?function\s*(\w*)\s*\(([^)]*)\)\s*(?::\s*\S+.*?)?\{',
+            stripped
+        )
+        if m:
+            func_name = m.group(1) or '<default>'
+            params = m.group(2) or ""
+            functions.append(Function(
+                name=func_name,
+                signature=f"({params})",
+                file=str(file_path),
+                line=i + 1,
+                async_flag=bool(re.search(r'\basync\b', stripped)),
+            ))
+            continue
     
     return functions
 
@@ -485,6 +509,7 @@ def extract_all(repo_path: Path, language: str) -> Blueprint:
         "javascript": {".js", ".jsx"},
         "typescript": {".ts", ".tsx"},
         "go": {".go"},
+        "rust": {".rs"},
     }
     
     extensions = lang_exts.get(language, {".py"})
@@ -494,9 +519,10 @@ def extract_all(repo_path: Path, language: str) -> Blueprint:
         "javascript": (extract_from_javascript, None),
         "typescript": (extract_from_typescript, None),
         "go": (None, None),  # filled in below after import
+        "rust": (None, None),  # filled in below - special case
     }
     
-    # Import go_parser lazily to avoid circular imports
+    # Import go_parser and rust_extractor lazily to avoid circular imports
     if language == "go":
         from repo_transmute.transpiler.go_parser import (
             extract_from_go,
@@ -508,6 +534,22 @@ def extract_all(repo_path: Path, language: str) -> Blueprint:
                 functions.extend(extract_from_go(file_path))
                 data_structures.extend(extract_structs_from_go(file_path))
                 data_structures.extend(extract_interfaces_from_go(file_path))
+            except Exception:
+                continue
+    elif language == "rust":
+        from repo_transmute.blueprint.rust_extractor import (
+            extract_from_rust,
+            extract_structs_from_rust,
+            extract_enums_from_rust,
+            extract_impls_from_rust,
+            extract_all_rust,
+        )
+        for file_path in walk_source_files(repo_path, extensions=extensions):
+            try:
+                funcs, structs, imports = extract_all_rust(file_path)
+                functions.extend(funcs)
+                data_structures.extend(structs)
+                all_imports.extend(imports)
             except Exception:
                 continue
     else:
