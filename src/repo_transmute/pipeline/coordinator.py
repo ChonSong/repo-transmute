@@ -996,4 +996,15 @@ def analyze_dependencies(repo_path: Path) -> dict:
         else:
             stdlib = {"os", "sys", "re", "json", "typing", "pathlib", "asyncio"}
             if imp.split(".")[0] not in stdlib:
+                if "third_party" not in deps:
+                    deps["third_party"] = set()
                 deps["third_party"].add(imp.split(".")[0])
+
+    # Convert sets to lists for JSON serializability
+    deps["files"] = list(deps.get("files", []))
+    deps["imports"] = dict(deps.get("imports", {}))
+    deps["external"] = sorted(deps.get("external", set()))
+    deps["internal"] = sorted(deps.get("internal", set()))
+    deps["third_party"] = sorted(deps.get("third_party", set()))
+
+    return deps
