@@ -5,6 +5,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
+import yaml
+
 from repo_transmute.blueprint import Blueprint
 from repo_transmute.blueprint.extractor import DataStructure, Function
 from repo_transmute.txtai.client import TxtaiClient
@@ -80,6 +82,29 @@ def _function_uid(repo: str, func: Function, chunk_id: int) -> str:
 
 def _ds_uid(repo: str, ds: DataStructure, chunk_id: int) -> str:
     return f"{repo}:class:{ds.file}:{ds.line}:chunk{chunk_id}"
+
+
+# --------------------------------------------------------------------------------
+# Chunk-file loader (legacy format)
+# --------------------------------------------------------------------------------
+
+def _load_chunk_file(yaml_path: Path) -> Optional[Dict[str, Any]]:
+    """Load a legacy chunk file and return its data, or None if not a chunk file.
+
+    Legacy chunk files have the format:
+        {chunk: N, files: [...], total_chunks: M}
+
+    Modern full blueprints have:
+        {version, generated, source: {repo, language}, blueprint: {functions, data_structures}}
+    """
+    with open(yaml_path) as f:
+        data = yaml.safe_load(f)
+    # Must have 'source' and 'blueprint' to be a modern full blueprint
+    if "source" in data and "blueprint" in data:
+        return None  # Not a chunk file — use load_blueprint instead
+    if "chunk" in data and "files" in data:
+        return data
+    return None
 
 
 # --------------------------------------------------------------------------------
@@ -190,17 +215,33 @@ class BlueprintIndexer:
     ) -> IndexStats:
         """Load a YAML blueprint and index it in one step.
 
+        Handles both modern full blueprints (``{source, blueprint}``) and
+        legacy chunk files (``{chunk, files, total_chunks}``).
+
+        For legacy chunk files, functions are NOT re-extracted (the chunk files
+        only contain file lists, not function data). The chunk file is skipped
+        for indexing purposes — the parent repo's full blueprint should be
+        used instead.
+
         Args:
             yaml_path: Path to a saved ``.yaml`` blueprint file.
             chunk_id: Chunk number (for chunked repos).
 
         Returns:
-            IndexStats for the run.
+            IndexStats for the run (may be zero docs if file was a chunk file).
         """
         from repo_transmute.blueprint.storage import (
             load_blueprint,
             get_blueprint_last_modified,
         )
+
+        # Check if this is a legacy chunk file (not a full blueprint)
+        chunk_data = _load_chunk_file(yaml_path)
+        if chunk_data is not None:
+            # Legacy chunk file — skip, function data not present
+            # The parent repo's full blueprint (if re-ingested) should be indexed instead
+            return self._stats
+
         blueprint = load_blueprint(yaml_path)
         last_modified = get_blueprint_last_modified(yaml_path)
         return self.index_blueprint(blueprint, chunk_id=chunk_id)
@@ -232,10 +273,23 @@ class BlueprintIndexer:
         """
         from repo_transmute.blueprint.storage import get_blueprint_last_modified
 
-        # Group yaml paths by repo (handles chunked repos: x.chunk0.yaml, x.chunk1.yaml, ...)
-        repo_chunks: Dict[str, List[tuple]] = {}
+        # Separate full blueprints from legacy chunk files.
+        # Full blueprints are indexed; legacy chunk files are skipped
+        # (they contain file lists only, not function data).
+        full_bp_files: List[Path] = []
+        legacy_chunk_files: List[Path] = []
+
         for path in sorted(blueprints_dir.glob(glob_pattern)):
-            name = path.stem  # e.g. "HKUDS__nanobot.chunk10" or "HKUDS__nanobot"
+            chunk_data = _load_chunk_file(path)
+            if chunk_data is not None:
+                legacy_chunk_files.append(path)
+            else:
+                full_bp_files.append(path)
+
+        # Group full blueprints by repo
+        repo_full_bps: Dict[str, List[tuple]] = {}
+        for path in full_bp_files:
+            name = path.stem  # e.g. "HKUDS__nanobot" or "lfnovo__open-notebook"
             repo = name
             chunk_id = 0
             if "." in name:
@@ -246,17 +300,17 @@ class BlueprintIndexer:
                         chunk_id = int(maybe_chunk[len("chunk"):])
                     except ValueError:
                         pass
-            if repo not in repo_chunks:
-                repo_chunks[repo] = []
-            repo_chunks[repo].append((path, chunk_id))
+            if repo not in repo_full_bps:
+                repo_full_bps[repo] = []
+            repo_full_bps[repo].append((path, chunk_id))
 
         # Record the indexing timestamp once per run
         self._last_indexed = datetime.utcnow().isoformat() + "Z"
 
-        for repo, chunks in sorted(repo_chunks.items()):
+        for repo, chunks in sorted(repo_full_bps.items()):
             # Check if this repo has changed since last index
             if skip_unchanged:
-                yaml_path_for_meta = chunks[0][0]  # any chunk file works for last_modified
+                yaml_path_for_meta = chunks[0][0]
                 last_modified = get_blueprint_last_modified(yaml_path_for_meta)
                 prev_indexed = self.client.get_repo_last_indexed(repo)
                 prev_modified = self.client.get_repo_last_modified(repo)

@@ -58,6 +58,16 @@ def save_blueprint(
                     "file": ds.file,
                     "line": ds.line,
                     "fields": ds.fields,
+                    "docstring": ds.docstring if hasattr(ds, "docstring") else None,
+                    "methods": [
+                        {
+                            "name": m.name,
+                            "signature": m.signature,
+                            "file": m.file,
+                            "line": m.line,
+                        }
+                        for m in ds.methods
+                    ] if hasattr(ds, "methods") else [],
                 }
                 for ds in blueprint.data_structures
             ],
@@ -87,6 +97,9 @@ def load_blueprint(path: Path) -> Blueprint:
             file=f["file"],
             line=f["line"],
             async_flag=f.get("async", False),
+            body=f.get("body", ""),
+            docstring=f.get("docstring"),
+            decorators=f.get("decorators", []),
         )
         for f in data.get("blueprint", {}).get("functions", [])
     ]
@@ -98,6 +111,16 @@ def load_blueprint(path: Path) -> Blueprint:
             file=ds["file"],
             line=ds["line"],
             fields=ds.get("fields", []),
+            docstring=ds.get("docstring"),
+            methods=[
+                Function(
+                    name=m["name"],
+                    signature=m["signature"],
+                    file=m["file"],
+                    line=m["line"],
+                )
+                for m in ds.get("methods", [])
+            ] if ds.get("methods") else [],
         )
         for ds in data.get("blueprint", {}).get("data_structures", [])
     ]
