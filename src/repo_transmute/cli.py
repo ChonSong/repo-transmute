@@ -577,7 +577,7 @@ def search(query: str, limit: int, repo_opt: str, blueprint_opt: str, kind: str,
         repo-transmute search "JWT" --blueprint HKUDS/nanobot --json
         repo-transmute search --explain f1a2b3c4   # show full doc for UID
     """
-    if not query:
+    if not query and not explain_uid:
         click.echo("Error: query argument required.", err=True)
         return
 
@@ -600,12 +600,28 @@ def search(query: str, limit: int, repo_opt: str, blueprint_opt: str, kind: str,
             except Exception as e:
                 click.echo(f"Error explaining UID '{explain_uid}': {e}", err=True)
                 return
-            click.echo(f"=== Explain UID: {explain_uid} ===")
-            click.echo(f"  Score: {explanation.get('score', 'N/A')}")
-            if 'text' in explanation:
-                click.echo(f"  Text:  {explanation['text'][:200]}")
+            if 'error' in explanation:
+                click.echo(f"UID '{explain_uid}' not found in index.", err=True)
+                return
+
+            click.echo(f"=== UID: {explain_uid} ===")
+            click.echo(f"  Name:     {explanation.get('name', 'N/A')}")
+            click.echo(f"  Kind:     {explanation.get('kind', 'N/A')}")
+            click.echo(f"  Repo:     {explanation.get('repo', 'N/A')}")
+            click.echo(f"  Language: {explanation.get('language', 'N/A')}")
+            click.echo(f"  Location: {explanation.get('file', 'N/A')}:{explanation.get('line', 'N/A')}")
+            if explanation.get('signature'):
+                click.echo(f"  Signature: {explanation['signature']}")
+            score = explanation.get('score')
+            if score is not None:
+                click.echo(f"  Score:    {score:.4f}")
+            if explanation.get('text'):
+                click.echo(f"  Text:     {explanation['text'][:300]}")
+            if explanation.get('docstring'):
+                click.echo(f"  Docstring: {explanation['docstring'][:200]}")
             for k, v in explanation.items():
-                if k not in ('score', 'text'):
+                if k not in ('id', 'name', 'kind', 'repo', 'language', 'file', 'line',
+                             'signature', 'score', 'text', 'docstring'):
                     click.echo(f"  {k}: {v}")
             return
 

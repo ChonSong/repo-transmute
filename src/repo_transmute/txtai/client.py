@@ -63,7 +63,6 @@ class TxtaiClient:
         }
 
         self._embeddings: Optional[Embeddings] = None
-        self._meta_db: Optional[Path] = None
 
     # ------------------------------------------------------------------
     # Internal: metadata DB
@@ -239,8 +238,9 @@ class TxtaiClient:
     ) -> None:
         """Index documents for semantic search.
 
-        The ``text_field`` value is vectorised. All other fields are stored
-        in a SQLite sidecar and retrieved after search.
+        The ``text_field`` value is vectorised. All other fields, INCLUDING
+        ``text_field`` itself, are stored in a SQLite sidecar and retrieved
+        after search and in :meth:`get_document`.
 
         Args:
             documents: Dicts with at least ``text_field`` and ``uid_field``.
@@ -256,8 +256,8 @@ class TxtaiClient:
             if not text or not uid:
                 continue
 
-            # Everything except the text goes into metadata
-            meta = {k: v for k, v in doc.items() if k not in (text_field, uid_field)}
+            # Everything including text goes into metadata so get_document() can return it
+            meta = {k: v for k, v in doc.items() if k != uid_field}
             self._upsert_meta(uid, meta)
             rows.append((uid, text))
 
@@ -279,6 +279,16 @@ class TxtaiClient:
 
     def count(self) -> int:
         return self.embeddings.count()
+
+    def get_document(self, uid: str) -> Optional[Dict[str, Any]]:
+        """Retrieve the full stored document for a uid (metadata + text).
+
+        Returns None if the uid is not found in the index.
+        """
+        meta = self._fetch_meta([uid]).get(uid)
+        if meta is None:
+            return None
+        return {"id": uid, **meta}
 
     # ------------------------------------------------------------------
     # Retrieval

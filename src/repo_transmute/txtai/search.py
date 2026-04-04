@@ -315,9 +315,15 @@ class BlueprintSearch:
         }
 
     def explain(self, uid: str) -> Dict[str, Any]:
-        """Return the full indexed document for a uid (for debugging/audit)."""
-        # txtai's explain is available on the embeddings directly
-        return self.client.embeddings.explain(uid)  # type: ignore[return-value]
+        """Return the full indexed document for a uid (for debugging/audit).
+
+        Uses the metadata sidecar to reconstruct the complete stored document
+        (text + all metadata fields) rather than txtai's token-scoring explain.
+        """
+        doc = self.client.get_document(uid)
+        if doc is None:
+            return {"error": f"UID '{uid}' not found in index"}
+        return doc
 
     def repos(self) -> List[str]:
         """List all unique repo names currently indexed."""
