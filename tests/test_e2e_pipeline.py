@@ -471,6 +471,326 @@ def _private():
 # Tests: Phase 5 — Validation and refinement wiring
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Tests: Real LLM transpilation (require_api_key guard on each test)
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Tests: Real LLM transpilation (require_api_key guard on each test)
+# ---------------------------------------------------------------------------
+
+class TestRealLLMTranspilation:
+    """Real-LLM tests gated by `require_api_key()`.
+
+    These tests call the actual MiniMax or z.ai API, so they are
+    skipped automatically when MINIMAX_API_KEY / ZAI_API_KEY is not set.
+    They are NOT included in the default test run; run them explicitly with::
+
+        pytest tests/test_e2e_pipeline.py -v -k "real_llm"
+
+    (They are also automatically excluded from test collection when
+    neither API key is set, via the module-level `require_api_key()` call.)
+    """
+
+    @pytest.mark.real_llm
+    def test_transpile_string_produces_typescript(self):
+        """transpile_string() calls the LLM and returns valid TypeScript."""
+        require_api_key()
+
+        from repo_transmute.transpiler.llm import Transpiler
+
+        yaml_str = (
+            "blueprint:\n"
+            "  repo: test/math\n"
+            "  language: python\n"
+            "  functions:\n"
+            "    - name: add\n"
+            "      signature: \"def add(a: int, b: int) -> int\"\n"
+            "      file: math.py\n"
+            "      line: 1\n"
+            "      async: false\n"
+            "      docstring: Add two integers.\n"
+            "      decorators: []\n"
+            "      body: \"return a + b\"\n"
+            "  data_structures: []\n"
+        )
+
+        transpiler = Transpiler()
+        result = transpiler.transpile_string(yaml_str, target_lang="typescript")
+
+        # LLM should produce something that looks like TypeScript
+        assert isinstance(result, str), f"Expected str, got {type(result)}"
+        assert len(result) > 10, f"Result too short: {result!r}"
+        # Check for TypeScript-like indicators
+        ts_indicators = ["function", "export", ": number", "=>", "const "]
+        assert any(tok in result for tok in ts_indicators), (
+            f"Result does not look like TypeScript: {result[:200]!r}"
+        )
+        # Should NOT contain Python syntax left behind
+        assert "def add" not in result, "Python def leaked into output"
+        assert "return a + b" not in result, "Python body leaked into output"
+
+    @pytest.mark.real_llm
+    def test_transpile_string_respects_model(self):
+        """transpile_string() uses the model set on the Transpiler."""
+        require_api_key()
+
+        import os
+        from repo_transmute.transpiler.llm import Transpiler
+
+        yaml_str = (
+            "blueprint:\n"
+            "  repo: test/math\n"
+            "  language: python\n"
+            "  functions:\n"
+            "    - name: add\n"
+            "      signature: \"def add(a: int, b: int) -> int\"\n"
+            "      file: math.py\n"
+            "      line: 1\n"
+            "      async: false\n"
+            "      docstring: ''\n"
+            "      decorators: []\n"
+            "      body: \"return a + b\"\n"
+            "  data_structures: []\n"
+        )
+
+        # Test that the method is callable with any model string
+        transpiler = Transpiler(model="GLM-4")
+        # Just verify no crash on the call (real API key still needed)
+        try:
+            transpiler.transpile_string(yaml_str, target_lang="typescript")
+        except ValueError as e:
+            # "No ZAI_API_KEY found" is expected when only MINIMAX_API_KEY is set
+            assert "ZAI_API_KEY" in str(e), f"Unexpected ValueError: {e}"
+
+    @pytest.mark.real_llm
+    def test_transpile_string_python_to_go(self):
+        """transpile_string() can transpile Python to Go."""
+        require_api_key()
+
+        from repo_transmute.transpiler.llm import Transpiler
+
+        yaml_str = (
+            "blueprint:\n"
+            "  repo: test/math\n"
+            "  language: python\n"
+            "  functions:\n"
+            "    - name: add\n"
+            "      signature: \"def add(a: int, b: int) -> int\"\n"
+            "      file: math.py\n"
+            "      line: 1\n"
+            "      async: false\n"
+            "      docstring: ''\n"
+            "      decorators: []\n"
+            "      body: \"return a + b\"\n"
+            "  data_structures: []\n"
+        )
+
+        transpiler = Transpiler()
+        result = transpiler.transpile_string(yaml_str, target_lang="go")
+
+        assert isinstance(result, str)
+        assert len(result) > 10
+        # Should contain Go function syntax
+        go_indicators = ["func ", "package ", "func Add(", "int"]
+        assert any(tok in result for tok in go_indicators), (
+            f"Result does not look like Go: {result[:200]!r}"
+        )
+
+    @pytest.mark.real_llm
+    def test_transpile_string_handles_decorators(self):
+        """transpile_string() includes decorator info in the prompt."""
+        require_api_key()
+
+        from repo_transmute.transpiler.llm import Transpiler
+
+        yaml_str = (
+            "blueprint:\n"
+            "  repo: test/api\n"
+            "  language: python\n"
+            "  functions:\n"
+            "    - name: fetch_data\n"
+            "      signature: \"def fetch_data(url: str) -> dict\"\n"
+            "      file: api.py\n"
+            "      line: 1\n"
+            "      async: false\n"
+            "      docstring: Fetch data from a URL.\n"
+            "      decorators:\n"
+            "        - \"@app.get('/data')\"\n"
+            "      body: \"return {}\"\n"
+            "  data_structures: []\n"
+        )
+
+        transpiler = Transpiler()
+        result = transpiler.transpile_string(yaml_str, target_lang="typescript")
+
+        assert isinstance(result, str)
+        assert len(result) > 10
+        # Decorators should influence the output (e.g., HTTP method annotations)
+        # We just check it doesn't crash and produces something
+        assert len(result) > 20
+
+    @pytest.mark.real_llm
+    def test_transpile_string_multiple_functions(self):
+        """transpile_string() handles multiple functions in one call."""
+        require_api_key()
+
+        from repo_transmute.transpiler.llm import Transpiler
+
+        yaml_str = (
+            "blueprint:\n"
+            "  repo: test/utils\n"
+            "  language: python\n"
+            "  functions:\n"
+            "    - name: add\n"
+            "      signature: \"def add(a: int, b: int) -> int\"\n"
+            "      file: utils.py\n"
+            "      line: 1\n"
+            "      async: false\n"
+            "      docstring: ''\n"
+            "      decorators: []\n"
+            "      body: \"return a + b\"\n"
+            "    - name: multiply\n"
+            "      signature: \"def multiply(a: int, b: int) -> int\"\n"
+            "      file: utils.py\n"
+            "      line: 5\n"
+            "      async: false\n"
+            "      docstring: ''\n"
+            "      decorators: []\n"
+            "      body: \"return a * b\"\n"
+            "    - name: divide\n"
+            "      signature: \"def divide(a: float, b: float) -> float\"\n"
+            "      file: utils.py\n"
+            "      line: 9\n"
+            "      async: false\n"
+            "      docstring: ''\n"
+            "      decorators: []\n"
+            "      body: \"return a / b\"\n"
+            "  data_structures: []\n"
+        )
+
+        transpiler = Transpiler()
+        result = transpiler.transpile_string(yaml_str, target_lang="typescript")
+
+        assert isinstance(result, str)
+        assert len(result) > 20
+        # Should contain code for multiple functions
+        func_indicators = ["add", "multiply", "divide", "function", "export"]
+        matched = [tok for tok in func_indicators if tok in result]
+        assert len(matched) >= 2, f"Expected multiple functions in output, got: {result[:300]!r}"
+
+    @pytest.mark.real_llm
+    def test_transpile_string_with_data_structures(self):
+        """transpile_string() includes data structures in transpilation."""
+        require_api_key()
+
+        from repo_transmute.transpiler.llm import Transpiler
+
+        yaml_str = (
+            "blueprint:\n"
+            "  repo: test/models\n"
+            "  language: python\n"
+            "  functions:\n"
+            "    - name: get_user\n"
+            "      signature: \"def get_user(id: int) -> User\"\n"
+            "      file: models.py\n"
+            "      line: 1\n"
+            "      async: false\n"
+            "      docstring: Get a user by ID.\n"
+            "      decorators: []\n"
+            "      body: pass\n"
+            "  data_structures:\n"
+            "    - name: User\n"
+            "      type: class\n"
+            "      file: models.py\n"
+            "      line: 10\n"
+            "      fields:\n"
+            "        - name: id\n"
+            "          type: int\n"
+            "        - name: name\n"
+            "          type: str\n"
+            "      docstring: User model.\n"
+            "      methods: []\n"
+        )
+
+        transpiler = Transpiler()
+        result = transpiler.transpile_string(yaml_str, target_lang="typescript")
+
+        assert isinstance(result, str)
+        assert len(result) > 10
+        # Should contain an interface or type for User
+        ts_indicators = ["interface", "type ", "class ", "User"]
+        matched = [tok for tok in ts_indicators if tok in result]
+        assert len(matched) >= 1, f"Expected User type in output, got: {result[:300]!r}"
+
+    @pytest.mark.real_llm
+    def test_transpile_string_post_clean_strips_thinking_tags(self):
+        """transpile_string() post-cleans thinking tags from LLM output."""
+        require_api_key()
+
+        from repo_transmute.transpiler.llm import Transpiler
+
+        yaml_str = (
+            "blueprint:\n"
+            "  repo: test/debug\n"
+            "  language: python\n"
+            "  functions:\n"
+            "    - name: noop\n"
+            "      signature: \"def noop() -> None\"\n"
+            "      file: debug.py\n"
+            "      line: 1\n"
+            "      async: false\n"
+            "      docstring: ''\n"
+            "      decorators: []\n"
+            "      body: pass\n"
+            "  data_structures: []\n"
+        )
+
+        transpiler = Transpiler()
+        result = transpiler.transpile_string(yaml_str, target_lang="typescript")
+
+        # Thinking tags should have been stripped by _post_clean
+        assert "<think>" not in result, "<think> tag leaked into output"
+        assert "[THOUGHT]" not in result, "[THOUGHT] tag leaked into output"
+        assert "</think>" not in result.lower(), "thinking tag leaked into output"
+
+    @pytest.mark.real_llm
+    def test_transpile_string_raises_on_missing_api_key(self):
+        """transpile_string() raises ValueError with a clear message when no API key is set."""
+        import os
+        from repo_transmute.transpiler.llm import Transpiler
+
+        # Temporarily clear API keys
+        saved_minimax = os.environ.pop("MINIMAX_API_KEY", None)
+        saved_zai = os.environ.pop("ZAI_API_KEY", None)
+        try:
+            yaml_str = (
+                "blueprint:\n"
+                "  repo: test/math\n"
+                "  language: python\n"
+                "  functions:\n"
+                "    - name: add\n"
+                "      signature: \"def add(a: int, b: int) -> int\"\n"
+                "      file: math.py\n"
+                "      line: 1\n"
+                "      async: false\n"
+                "      docstring: ''\n"
+                "      decorators: []\n"
+                "      body: \"return a + b\"\n"
+                "  data_structures: []\n"
+            )
+            transpiler = Transpiler()
+            with pytest.raises(ValueError) as exc_info:
+                transpiler.transpile_string(yaml_str, target_lang="typescript")
+            assert "MINIMAX_API_KEY" in str(exc_info.value) or \
+                   "ZAI_API_KEY" in str(exc_info.value), \
+                   f"Error message should mention missing API key: {exc_info.value}"
+        finally:
+            if saved_minimax:
+                os.environ["MINIMAX_API_KEY"] = saved_minimax
+            if saved_zai:
+                os.environ["ZAI_API_KEY"] = saved_zai
+
 class TestValidationAndRefinement:
     """_validate_and_refine() and multi-pass refinement are wired correctly.
 

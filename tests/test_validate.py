@@ -6,7 +6,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 from repo_transmute.transpiler.validate import (
-    TestResult,
+    SuiteResult,
     _detect_test_framework,
     _parse_pytest_output,
     _parse_jest_output,
@@ -353,26 +353,26 @@ class TestValidateDispatcher:
 # TestResult
 # ---------------------------------------------------------------------------
 
-class TestTestResult:
+class TestSuiteResult:
     def test_success_with_counts(self):
-        r = TestResult(success=True, passed=10, failed=0, errors=0)
+        r = SuiteResult(success=True, passed=10, failed=0, errors=0)
         assert r.total == 10
         assert r.success is True
         assert "10" in str(r)
 
     def test_failure_with_counts(self):
-        r = TestResult(success=False, passed=8, failed=2, errors=1)
+        r = SuiteResult(success=False, passed=8, failed=2, errors=1)
         assert r.total == 11
         assert r.success is False
         assert "2" in str(r)
         assert "8 passed" in str(r)
 
     def test_str_success(self):
-        r = TestResult(success=True, passed=5)
+        r = SuiteResult(success=True, passed=5)
         assert "✅" in str(r)
 
     def test_str_failure(self):
-        r = TestResult(success=False, passed=5, failed=1)
+        r = SuiteResult(success=False, passed=5, failed=1)
         assert "❌" in str(r)
 
 

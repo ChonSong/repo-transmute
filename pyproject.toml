@@ -43,6 +43,17 @@ repo-transmute = "repo_transmute.cli:cli"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.pytest.ini_options]
+# Custom mark for tests that call the real LLM API (MiniMax or z.ai).
+# These tests require MINIMAX_API_KEY or ZAI_API_KEY to be set and are
+# skipped by default. Run them explicitly with:
+#   pytest -v -k "real_llm"
+# Or to include them in the default run (will skip gracefully if no key):
+#   pytest -v -m "real_llm or not real_llm"
+markers = [
+    "real_llm: tests that call the real MiniMax or z.ai API (require API key)",
+]
+
 [tool.ruff]
 line-length = 100
 

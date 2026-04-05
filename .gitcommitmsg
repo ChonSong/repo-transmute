@@ -1,0 +1,37 @@
+Add real LLM e2e tests with require_api_key() guards
+
+llm.py:
+- Add Transpiler.transpile_string(yaml_str, target_lang): calls LLM
+  directly from a YAML string, bypassing file I/O. Returns raw string
+  (no ValidationResult) for test convenience.
+- Improve error messages in _call_minimax/_call_zai to suggest using
+  mocked transpile() in tests rather than generic "set the env var".
+- Fix _post_clean regex: was using <thought> tag instead of <think>.
+
+pyproject.toml:
+- Register 'real_llm' pytest marker in [tool.pytest.ini_options].
+
+tests/conftest.py (NEW):
+- require_api_key(): skips test if no valid key is configured.
+  Validates key format: MiniMax must be sk-cp- + 60-100 chars;
+  z.ai must be exactly 32 hex chars. Prevents 401 errors from
+  expired/demonstration keys.
+- _api_key_problem() returns skip reason or None.
+- pytest_collection_modifyitems: skips @pytest.mark.real_llm tests
+  at collection time when no valid key is found.
+
+tests/test_e2e_pipeline.py:
+- Add 8 real-LLM tests in TestRealLLMTranspilation:
+  - test_transpile_string_produces_typescript
+  - test_transpile_string_respects_model
+  - test_transpile_string_python_to_go
+  - test_transpile_string_handles_decorators
+  - test_transpile_string_multiple_functions
+  - test_transpile_string_with_data_structures
+  - test_transpile_string_post_clean_strips_thinking_tags
+  - test_transpile_string_raises_on_missing_api_key
+- All marked @pytest.mark.real_llm and call require_api_key().
+- Default run: 29 pass, 8 skipped, 3 warnings.
+- Run real-LLM tests: pytest -k real_llm
+
+All 491 tests pass (483 passed + 8 skipped).

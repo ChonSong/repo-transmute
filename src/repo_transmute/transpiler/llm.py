@@ -1,4 +1,9 @@
-"""LLM-based transpiler using MiniMax or z.ai GLM models."""
+"""LLM-based transpiler using MiniMax or z.ai GLM models.
+
+Real LLM tests are gated by the `real_llm` pytest marker and
+MINIMAX_API_KEY / ZAI_API_KEY environment variables. All other tests
+use mocked transpile() which bypasses the LLM entirely.
+"""
 
 import os
 import re
@@ -116,10 +121,13 @@ class Transpiler:
         return result, validation_result
 
     def _call_minimax(self, prompt: str) -> str:
-        """Call MiniMax API."""
+        """Call MiniMax API. Requires MINIMAX_API_KEY to be set."""
         api_key = os.environ.get("MINIMAX_API_KEY")
         if not api_key:
-            raise ValueError("No API key found. Set MINIMAX_API_KEY")
+            raise ValueError(
+                "No MINIMAX_API_KEY found. Set the MINIMAX_API_KEY environment variable, "
+                "or use a mocked transpile() in tests."
+            )
 
         url = "https://api.minimax.io/v1/chat/completions"
         headers = {
@@ -140,10 +148,13 @@ class Transpiler:
         return result["choices"][0]["message"]["content"]
 
     def _call_zai(self, prompt: str) -> str:
-        """Call z.ai API (GLM models)."""
+        """Call z.ai API (GLM models). Requires ZAI_API_KEY to be set."""
         api_key = os.environ.get("ZAI_API_KEY")
         if not api_key:
-            raise ValueError("No API key found. Set ZAI_API_KEY")
+            raise ValueError(
+                "No ZAI_API_KEY found. Set the ZAI_API_KEY environment variable, "
+                "or use a mocked transpile() in tests."
+            )
 
         url = "https://api.z.ai/api/coding/paas/v4/chat/completions"
         headers = {
@@ -180,12 +191,12 @@ class Transpiler:
             lines = text.split("\n")
             if lines[-1].strip() == "```":
                 text = "\n".join(lines[1:-1])
-            elif len(lines) > 1:
+            else:
                 text = "\n".join(lines[1:])
 
-        # Step 2: Strip thinking tags
-        text = re.sub(r"<thought>[\s\S]*?</thought>", "", text, flags=re.IGNORECASE)
+        # Step 2: Strip <think> and [THOUGHT] blocks
         text = re.sub(r"<think>[\s\S]*?</think>", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"\[THOUGHT\]", "", text, flags=re.IGNORECASE)
         text = re.sub(r"\[/THOUGHT\]", "", text, flags=re.IGNORECASE)
         text = re.sub(r"<thinking>[\s\S]*?</thinking>", "", text, flags=re.IGNORECASE)
 
@@ -359,15 +370,29 @@ class Transpiler:
     def transpile_string(
         self,
         blueprint_yaml: str,
-        target_lang: str = "typescript"
+        target_lang: str = "typescript",
     ) -> str:
-        """Transpile from YAML string."""
+        """Transpile from a YAML string, bypassing the blueprint file.
+
+        This method calls the LLM directly and returns only the raw
+        transpiled string (no file I/O or validation). Useful for tests
+        that want to exercise the LLM path without writing temp files.
+
+        Args:
+            blueprint_yaml: YAML string (not a path).
+            target_lang: Target language.
+
+        Returns:
+            Raw transpiled code string (no ValidationResult).
+        """
         import io
         blueprint = yaml.safe_load(io.StringIO(blueprint_yaml))
         prompt = build_transpile_prompt(blueprint, "python", target_lang)
         if "MiniMax" in self.model:
-            return self._call_minimax(prompt)
-        return self._call_zai(prompt)
+            raw = self._call_minimax(prompt)
+        else:
+            raw = self._call_zai(prompt)
+        return self._post_clean(raw, target_lang)
 
 
 def transpile_with_llm(
