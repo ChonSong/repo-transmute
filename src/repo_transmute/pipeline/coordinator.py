@@ -17,7 +17,7 @@ from repo_transmute.blueprint.storage import save_blueprint
 from repo_transmute.ingestion.clone import clone_repo
 from repo_transmute.ingestion.detector import detect_language
 from repo_transmute.transpiler.llm import Transpiler
-from repo_transmute.transpiler.validate import validate as real_validate, ValidationResult
+from repo_transmute.transpiler.validate import validate as real_validate, ValidationResult, run_tests, SuiteResult
 from repo_transmute.transpiler.prompts import build_transpile_prompt
 from repo_transmute.transpiler.chunker import (
     chunk_repository,
@@ -60,6 +60,7 @@ class PipelineResult:
     total_chunks: int = 0
     error: Optional[str] = None
     files_written: List[str] = field(default_factory=list)
+    test_result: Optional["SuiteResult"] = None
 
 
 @dataclass
@@ -859,7 +860,7 @@ Requirements:
                     error=f"Chunk validation failed: {'; '.join(error_msgs)}"
                 )
 
-            # Step 5: Real-tool validation of written files
+            # Step 4: Real-tool validation of written files
             real_validation_errors = []
             real_validation_warnings = []
 
@@ -891,9 +892,20 @@ Requirements:
                     error="Real-tool validation failed: " + "; ".join(real_validation_errors[:3])
                 )
 
+            # Step 5: Integration validation
             self.validator.validate_imports(transpiled_code)
             self.validator.validate_types(transpiled_code)
             validation_report = self.validator.generate_report()
+
+            # Step 6: Run the transpiled project's test suite
+            test_result = None
+            if output_files:
+                test_result = run_tests(
+                    project_root=output_dir,
+                    language=self.target_lang,
+                    test_files=None,
+                    timeout=120,
+                )
 
             return PipelineResult(
                 success=True,
@@ -903,14 +915,16 @@ Requirements:
                 passes_run=len(self.results),
                 chunks_processed=chunks_processed,
                 total_chunks=total_chunks,
-                files_written=written_paths
+                files_written=written_paths,
+                test_result=test_result,
             )
 
         except Exception as e:
             return PipelineResult(
                 success=False,
                 error=str(e),
-                passes_run=len(self.results)
+                passes_run=len(self.results),
+                test_result=None,
             )
 
     def _get_extension(self) -> str:

@@ -653,6 +653,24 @@ class TestPipelineCoordinatorWriteFiles:
         field_names = [f.name for f in fields(PipelineResult)]
         assert "files_written" in field_names
 
+    def test_pipeline_result_has_test_result_field(self):
+        """PipelineResult dataclass must include test_result (SuiteResult)."""
+        from dataclasses import fields
+        field_names = [f.name for f in fields(PipelineResult)]
+        assert "test_result" in field_names
+
+    def test_pipeline_result_test_result_is_suite_result_type(self):
+        """PipelineResult.test_result field has correct Optional[SuiteResult] type."""
+        from typing import get_type_hints
+        hints = get_type_hints(PipelineResult)
+        # The type annotation for test_result should reference SuiteResult
+        # We check the field annotation via __dataclass_fields__
+        import typing
+        field = PipelineResult.__dataclass_fields__["test_result"]
+        # The annotation is Optional["SuiteResult"]; check it contains SuiteResult
+        ann = str(field.type)
+        assert "SuiteResult" in ann, f"Expected SuiteResult in type annotation, got: {ann}"
+
     def test_write_files_returns_correct_extension(self):
         """_get_extension() returns the right file extension per target language."""
         coord_ts = PipelineCoordinator(target_lang="typescript")
@@ -817,6 +835,71 @@ class TestPipelineCoordinatorWriteFiles:
 # ---------------------------------------------------------------------------
 # CLI — transpile command individual chunk support
 # ---------------------------------------------------------------------------
+
+    def test_run_full_pipeline_calls_run_tests_when_output_files_exist(self, tmp_path):
+        """run_full_pipeline should call run_tests on the output directory after validation."""
+        from unittest.mock import patch, MagicMock
+        from repo_transmute.transpiler.validate import SuiteResult
+
+        coord = PipelineCoordinator(target_lang="typescript")
+
+        # Create a mock output file so output_files is non-empty
+        output_file = tmp_path / "name_test.ts"
+        output_file.write_text("export const x = 1;")
+
+        mock_suite_result = SuiteResult(success=True, passed=5, failed=0, errors=0)
+
+        with patch.object(coord, 'transpile_all_chunks') as mock_transpile,              patch('repo_transmute.pipeline.coordinator.run_tests') as mock_run_tests,              patch('repo_transmute.pipeline.coordinator.extract_all') as mock_extract,              patch('repo_transmute.pipeline.coordinator.clone_repo') as mock_clone:
+
+            mock_transpile.return_value = (
+                "transpiled_code", 1, 1, [str(output_file)], []
+            )
+            mock_extract.return_value = MagicMock()
+            mock_clone.return_value = tmp_path
+            mock_run_tests.return_value = mock_suite_result
+
+            result = coord.run_full_pipeline(
+                repo="owner/name",
+                cache_dir=tmp_path,
+                output_dir=tmp_path,
+            )
+
+            # Verify run_tests was called
+            mock_run_tests.assert_called_once()
+            call_args = mock_run_tests.call_args
+            assert call_args.kwargs['project_root'] == tmp_path
+            assert call_args.kwargs['language'] == 'typescript'
+            assert call_args.kwargs['timeout'] == 120
+
+            # Verify test_result is in the returned PipelineResult
+            assert result.test_result == mock_suite_result
+
+    def test_run_full_pipeline_skips_tests_when_no_output_files(self, tmp_path):
+        """run_full_pipeline should skip run_tests when no transpiled output files exist."""
+        from unittest.mock import patch, MagicMock
+
+        coord = PipelineCoordinator(target_lang="typescript")
+
+        with patch.object(coord, 'transpile_all_chunks') as mock_transpile,              patch('repo_transmute.pipeline.coordinator.run_tests') as mock_run_tests,              patch('repo_transmute.pipeline.coordinator.extract_all') as mock_extract,              patch('repo_transmute.pipeline.coordinator.clone_repo') as mock_clone:
+
+            mock_transpile.return_value = (
+                "transpiled_code", 1, 1, [], []  # empty written_paths
+            )
+            mock_extract.return_value = MagicMock()
+            mock_clone.return_value = tmp_path
+
+            result = coord.run_full_pipeline(
+                repo="owner/name",
+                cache_dir=tmp_path,
+                output_dir=tmp_path,
+            )
+
+            # Verify run_tests was NOT called
+            mock_run_tests.assert_not_called()
+            assert result.test_result is None
+
+
+
 
 class TestTranspileCommandChunkMode:
     """Tests for repo-transmute transpile --repo owner/repo --chunk-id N."""
