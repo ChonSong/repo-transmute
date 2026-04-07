@@ -4,6 +4,7 @@ import ast
 import re
 import subprocess
 import tempfile
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict, Any
@@ -27,6 +28,8 @@ from repo_transmute.transpiler.chunker import (
     extract_imports,
     extract_exports,
 )
+from repo_transmute.txtai.notebook import NotebookStore, PassRecord, NotebookEntry
+
 
 
 # Default directories
@@ -470,6 +473,10 @@ class PipelineCoordinator:
         self.max_functions_per_chunk = max_functions_per_chunk
         self.transpiler = Transpiler(model=model)
         self.validator = IntegrationValidator(target_lang)
+        # Notebook store for capturing transpilation passes
+        self.notebook_dir = Path("./data/notebooks")
+        self.notebook_store = NotebookStore(self.notebook_dir)
+        self._pass_records: List[PassRecord] = []
         self.results: List[str] = []
         self.chunk_progress: List[ChunkProgress] = []
 
@@ -582,6 +589,17 @@ class PipelineCoordinator:
                 code = raw_result
                 from repo_transmute.transpiler.validate import ValidationResult
                 validation_result = ValidationResult(success=True, output="mocked")
+            # Capture pass record for notebook
+            pass_record = PassRecord(
+                pass_number=1,
+                prompt="(blueprint serialized to tmp YAML)",
+                model=self.model,
+                raw_output=code,
+                errors_detected=[],
+                refined_output=None
+            )
+            self._pass_records.append(pass_record)
+
             return code, validation_result
         finally:
             tmp_path.unlink(missing_ok=True)
@@ -906,6 +924,22 @@ Requirements:
                     test_files=None,
                     timeout=120,
                 )
+
+            # Save notebook entry for this transpilation run
+            if self._pass_records:
+                entry = NotebookEntry(
+                    uid=f"{repo}:chunk-1:{datetime.now(timezone.utc).isoformat()}",
+                    repo=repo,
+                    chunk_id=-1,
+                    language=language,
+                    target_lang=self.target_lang,
+                    blueprint_text="(full pipeline - combined)",
+                    passes=self._pass_records,
+                    final_code=transpiled_code,
+                    tags=["pipeline"],
+                    metadata={"chunks_processed": chunks_processed, "total_chunks": total_chunks}
+                )
+                self.notebook_store.save(entry)
 
             return PipelineResult(
                 success=True,
