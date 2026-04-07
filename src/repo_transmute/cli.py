@@ -232,18 +232,36 @@ def pipeline(repo: str, target: str, output_dir: Path, cache_dir: Path, model: s
                 for err in result.validation.errors:
                     click.echo(f"    - {err}")
 
-        # Save outputs
-        output_dir.mkdir(parents=True, exist_ok=True)
-        owner, name = repo.split("/", 1)
+            # Show test results if run
+            if result.test_result:
+                tr = result.test_result
+                status = '✅' if tr.success else '❌'
+                click.echo(f"{status} Tests: {tr.passed}/{tr.passed + tr.failed} passed")
+                if tr.error:
+                    click.echo(f"   Error: {tr.error}")
 
-        ext = _target_ext(target)
-        code_file = output_dir / f"{name}.{ext}"
-        code_file.write_text(result.transpiled_code)
-        click.echo(f"\nSaved transpiled code to {code_file}")
+            # Save outputs
+            output_dir.mkdir(parents=True, exist_ok=True)
+            owner, name = repo.split("/", 1)
 
-        test_file = output_dir / f"{name}.test.{ext}"
-        test_file.write_text(result.tests)
-        click.echo(f"Saved tests to {test_file}")
+            ext = _target_ext(target)
+
+            # Prefer individual files from write_files(); fall back to combined code
+            if result.files_written:
+                for written_path in result.files_written[:20]:
+                    p = Path(written_path)
+                    click.echo(f"  - {p.name}")
+                if len(result.files_written) > 20:
+                    click.echo(f"  ... and {len(result.files_written) - 20} more")
+                click.echo(f"Saved {len(result.files_written)} files to {output_dir}")
+            else:
+                code_file = output_dir / f"{name}.{ext}"
+                code_file.write_text(result.transpiled_code)
+                click.echo(f"Saved transpiled code to {code_file}")
+
+            test_file = output_dir / f"{name}.test.{ext}"
+            test_file.write_text(result.tests)
+            click.echo(f"Saved tests to {test_file}")
 
     else:
         click.echo(click.style(f"\n❌ Pipeline failed: {result.error}", fg="red"))
