@@ -1,0 +1,35 @@
+name: Nightly AI Code Review
+
+on:
+  schedule:
+    # Run at 9AM Sydney time (23:00 UTC) Mon-Fri
+    - cron: '0 23 * * 1-5'
+  workflow_dispatch:
+    # Manual trigger any time
+
+jobs:
+  review-codebase:
+    runs-on: ubuntu-latest
+    name: Nightly Codebase Review
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PR-Agent
+        run: pip install pr-agent
+
+      - name: Run Nightly Review
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pr-agent review --pr_url="${{ github.server_url }}/${{ github.repository }}/pull/1" \
+            --review_type incremental 2>&1 || echo "Nightly review attempted"
