@@ -47,15 +47,20 @@ class TxtaiClient:
         self,
         index_dir: Optional[Path] = None,
         model: Optional[str] = None,
+        *,
+        autoload: bool = True,
     ) -> None:
         """
         Args:
             index_dir: Directory for index + SQLite sidecar. Created if needed.
             model: HuggingFace sentence-transformers model name.
+            autoload: If True and an index exists at index_dir, load it immediately (default).
+                      Pass False to skip auto-loading (useful when building a fresh index).
         """
         self.index_dir = Path(index_dir) if index_dir else Path("./data/txtai")
         self.index_dir.mkdir(parents=True, exist_ok=True)
         self.model = model or self.DEFAULT_MODEL
+        self.autoload = autoload
 
         self._config: Dict[str, Any] = {
             "path": self.model,
@@ -63,6 +68,9 @@ class TxtaiClient:
         }
 
         self._embeddings: Optional[Embeddings] = None
+
+        if self.autoload and (self.index_dir / "config.json").exists():
+            self.load()
 
     # ------------------------------------------------------------------
     # Internal: metadata DB
@@ -263,6 +271,7 @@ class TxtaiClient:
 
         if rows:
             self.embeddings.upsert(rows)
+            self.save()  # persist immediately
 
     def delete(self, uids: Sequence[str]) -> None:
         """Remove documents by uid (from both faiss and SQLite)."""

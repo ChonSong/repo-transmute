@@ -1,11 +1,61 @@
-"""Browser automation utilities for RepoTransmute using Playwright."""
+"""Browser automation utilities for RepoTransmute using Playwright.
+
+This module is optional — requires `playwright` and `pillow` packages.
+Install with: pip install playwright pillow && playwright install chromium
+"""
+
+from __future__ import annotations
 
 from pathlib import Path
-from typing import List
+from typing import TYPE_CHECKING, List
+
 import asyncio
 
-from PIL import Image
-from playwright.async_api import async_playwright, Browser, Page, Error as PlaywrightError
+
+if TYPE_CHECKING:
+    from playwright.async_api import Browser
+
+
+# Optional imports - these packages must be installed separately
+try:
+    from playwright.async_api import async_playwright, Error as PlaywrightError
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+
+
+def _check_playwright() -> None:
+    """Raise ImportError if playwright is not installed."""
+    if not PLAYWRIGHT_AVAILABLE:
+        raise ImportError(
+            "playwright is not installed. Install with:\n"
+            "  pip install playwright pillow\n"
+            "  playwright install chromium"
+        )
+
+
+def _check_pillow() -> None:
+    """Raise ImportError if pillow is not installed."""
+    if not PIL_AVAILABLE:
+        raise ImportError("pillow is not installed. Install with: pip install pillow")
+
+
+async def _capture_screenshot_async(url: str, output: Path) -> None:
+    """Async implementation of screenshot capture."""
+    from playwright.async_api import async_playwright
+    _check_playwright()
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        page = await browser.new_page()
+        await page.goto(url)
+        await page.screenshot(path=str(output))
+        await browser.close()
 
 
 def capture_screenshot(url: str, output: Path) -> None:
@@ -14,18 +64,12 @@ def capture_screenshot(url: str, output: Path) -> None:
     Args:
         url: The URL to capture.
         output: Path to save the screenshot.
+    
+    Raises:
+        ImportError: If playwright is not installed.
     """
-    asyncio.get_event_loop().run_until_complete(_capture_screenshot_async(url, output))
-
-
-async def _capture_screenshot_async(url: str, output: Path) -> None:
-    """Async implementation of screenshot capture."""
-    async with async_playwright() as p:
-        browser = await p.chromium.launch()
-        page = await browser.new_page()
-        await page.goto(url)
-        await page.screenshot(path=str(output))
-        await browser.close()
+    _check_playwright()
+    asyncio.run(_capture_screenshot_async(url, output))
 
 
 def compare_screenshots(original: Path, generated: Path) -> float:
@@ -39,7 +83,12 @@ def compare_screenshots(original: Path, generated: Path) -> float:
         
     Returns:
         Similarity score between 0 (completely different) and 1 (identical).
+    
+    Raises:
+        ImportError: If pillow is not installed.
     """
+    _check_pillow()
+    
     img1 = Image.open(original).convert("RGB")
     img2 = Image.open(generated).convert("RGB")
     
@@ -61,14 +110,19 @@ def compare_screenshots(original: Path, generated: Path) -> float:
 
 
 class BrowserValidator:
-    """Browser-based validation for rendered pages."""
+    """Browser-based validation for rendered pages.
+    
+    Requires playwright to be installed.
+    """
     
     def __init__(self):
-        self._browser: Browser | None = None
+        _check_playwright()
+        self._browser = None
         self._playwright = None
     
-    async def _ensure_browser(self) -> Browser:
+    async def _ensure_browser(self):
         """Lazy initialization of browser."""
+        from playwright.async_api import async_playwright
         if self._browser is None:
             self._playwright = await async_playwright().start()
             self._browser = await self._playwright.chromium.launch()
@@ -83,16 +137,16 @@ class BrowserValidator:
             await self._playwright.stop()
     
     def close(self):
-        """Close the browser instance (sync wrapper)."""
+        """Close the browser instance."""
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # If we're in an async context, create a new task
-                asyncio.create_task(self._close_async())
-            else:
-                loop.run_until_complete(self._close_async())
-        except Exception:
+            asyncio.run(self._close_async())
+        except RuntimeError:
+            # Already running - just ignore
             pass
+    
+    async def close_async(self):
+        """Close the browser instance asynchronously."""
+        await self._close_async()
     
     def __enter__(self):
         return self
@@ -100,21 +154,9 @@ class BrowserValidator:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
     
-    def validate_page_loads(self, url: str) -> bool:
-        """Check if a page loads successfully.
-        
-        Args:
-            url: The URL to validate.
-            
-        Returns:
-            True if page loads without errors.
-        """
-        return asyncio.get_event_loop().run_until_complete(
-            self._validate_page_loads_async(url)
-        )
-    
     async def _validate_page_loads_async(self, url: str) -> bool:
         """Async implementation of page load validation."""
+        from playwright.async_api import Error as PlaywrightError
         browser = None
         try:
             browser = await self._ensure_browser()
@@ -125,21 +167,20 @@ class BrowserValidator:
         except PlaywrightError:
             return False
     
-    def check_console_errors(self, url: str) -> List[str]:
-        """Check for console errors on a page.
+    def validate_page_loads(self, url: str) -> bool:
+        """Check if a page loads successfully.
         
         Args:
-            url: The URL to check.
+            url: The URL to validate.
             
         Returns:
-            List of console error messages.
+            True if page loads without errors.
         """
-        return asyncio.get_event_loop().run_until_complete(
-            self._check_console_errors_async(url)
-        )
+        return asyncio.run(self._validate_page_loads_async(url))
     
     async def _check_console_errors_async(self, url: str) -> List[str]:
         """Async implementation of console error checking."""
+        from playwright.async_api import Error as PlaywrightError
         errors: List[str] = []
         browser = None
         
@@ -160,21 +201,20 @@ class BrowserValidator:
         
         return errors
     
-    def get_render_time(self, url: str) -> float:
-        """Measure page render time in seconds.
+    def check_console_errors(self, url: str) -> List[str]:
+        """Check for console errors on a page.
         
         Args:
-            url: The URL to measure.
+            url: The URL to check.
             
         Returns:
-            Render time in seconds.
+            List of console error messages.
         """
-        return asyncio.get_event_loop().run_until_complete(
-            self._get_render_time_async(url)
-        )
+        return asyncio.run(self._check_console_errors_async(url))
     
     async def _get_render_time_async(self, url: str) -> float:
         """Async implementation of render time measurement."""
+        from playwright.async_api import Error as PlaywrightError
         browser = None
         try:
             browser = await self._ensure_browser()
@@ -188,3 +228,14 @@ class BrowserValidator:
             return end_time - start_time
         except PlaywrightError:
             return -1.0
+    
+    def get_render_time(self, url: str) -> float:
+        """Measure page render time in seconds.
+        
+        Args:
+            url: The URL to measure.
+            
+        Returns:
+            Render time in seconds.
+        """
+        return asyncio.run(self._get_render_time_async(url))

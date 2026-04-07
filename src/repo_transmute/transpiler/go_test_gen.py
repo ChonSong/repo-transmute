@@ -40,6 +40,117 @@ def _param_names(params: str) -> List[str]:
     return names
 
 
+def _extract_params_from_signature(sig: str, is_method: bool = False) -> List[str]:
+    """Extract parameter names from a full Go function signature.
+
+    Handles both top-level functions and methods:
+    - Top-level: "(a, b int) int" -> ["a", "b"]
+    - Method: "(p *Person) (nums []int) int" -> ["nums"]
+    - Method with no params: "(p *Person) () string" -> []
+
+    Args:
+        sig: Full signature like "(a, b int) int" or "(p *Person) (nums []int) int"
+        is_method: True if this is a method (has receiver in first parens)
+
+    Returns:
+        List of parameter names (excluding receiver for methods)
+    """
+    if not sig or "(" not in sig:
+        return []
+
+    # Find the parameter section
+    if is_method:
+        # For methods, signature is: "(receiver) (params) return" or "(receiver) () return"
+        # We need to find the second '(' to get to actual params
+        first_paren = sig.index("(")
+        try:
+            second_paren = sig.index("(", first_paren + 1)
+        except ValueError:
+            # No second paren - method has no params, just receiver
+            return []
+        
+        # Find matching close paren
+        depth = 1
+        i = second_paren + 1
+        while i < len(sig) and depth > 0:
+            if sig[i] == "(":
+                depth += 1
+            elif sig[i] == ")":
+                depth -= 1
+            i += 1
+        param_section = sig[second_paren + 1:i - 1]
+    else:
+        # For top-level: "(a, b int) return"
+        first_paren = sig.index("(")
+        # Find matching close paren
+        depth = 1
+        i = first_paren + 1
+        while i < len(sig) and depth > 0:
+            if sig[i] == "(":
+                depth += 1
+            elif sig[i] == ")":
+                depth -= 1
+            i += 1
+        param_section = sig[first_paren + 1:i - 1]
+
+    # Now parse the param section like _param_names does
+    return _param_names(param_section)
+
+
+def _extract_return_type(sig: str, is_method: bool = False) -> str:
+    """Extract return type from a Go function signature.
+
+    Handles both top-level functions and methods:
+    - Top-level: "(a, b int) int" -> "int"
+    - Method: "(p *Person) (nums []int) int" -> "int"
+    - Method no params: "(p *Person) () string" -> "string"
+    - Multi-return: "(a int) (int, error)" -> "(int, error)"
+
+    Args:
+        sig: Full signature
+        is_method: True if this is a method
+
+    Returns:
+        Return type string (may be empty for no return)
+    """
+    if not sig or ")" not in sig:
+        return ""
+
+    # Count closing parens - if there's more than one, the return type is in parens
+    close_paren_count = sig.count(")")
+
+    if close_paren_count == 1:
+        # Simple case: "(params) return" - return is after the single )
+        # Also covers method with no params: "(p *Person) () string" - returns "string"
+        last_paren = sig.rindex(")")
+        return sig[last_paren + 1:].strip()
+    elif close_paren_count >= 2:
+        # Multi-return: "(params) (return1, return2)" - find second-to-last )
+        # Or method: "(receiver) (params) return" - return is after the last )
+        # 
+        # For multi-return like "(a int) (int, error)", the return is in parens before the last )
+        # We need to find the SECOND-TO-LAST ) to get the full return type
+        paren_positions = [i for i, c in enumerate(sig) if c == ')']
+        
+        if is_method:
+            # For methods: "(receiver) (params) return" or "(receiver) () return"
+            # Return is after the last )
+            last_paren = paren_positions[-1]
+            return sig[last_paren + 1:].strip()
+        else:
+            # For top-level with multi-return: "(params) (int, error)"
+            # Return starts after the second-to-last )
+            # Example: "(path string) ([]byte, error)"
+            # paren_positions = [12, 28]
+            # Second-to-last is 12, return starts at 13: "[]byte, error)"
+            # We need content from 13 to 28, but excluding the closing )
+            return_start = paren_positions[-2] + 1
+            return_end = paren_positions[-1]
+            return sig[return_start:return_end].strip()
+
+    return ""
+
+
 def _needs_import(imports: List[GoImport], pkg: str) -> bool:
     """Check if an import for `pkg` is already present."""
     return any(imp.path == pkg for imp in imports)
@@ -128,15 +239,13 @@ def generate_test_stub(func_info: dict, target_pkg: str = "fixtures") -> str:
     receiver = func_info.get("receiver", "")
 
     test_name = _to_test_name(name)
-    param_names = _param_names(sig)
 
-    # Parse return type from signature
-    # sig is like "(a, b int) int" or "(a, b int) (int, error)" for multi-return
-    ret_type = ""
-    if ")" in sig:
-        paren_end = sig.index(")")
-        ret_type = sig[paren_end + 1:].strip()
-    
+    # Use the new helper to extract params correctly (handles method receiver)
+    param_names = _extract_params_from_signature(sig, is_method=is_method)
+
+    # Use the new helper to extract return type correctly
+    ret_type = _extract_return_type(sig, is_method=is_method)
+
     # Check if error is in return types (for multi-return like (int, error))
     returns_error = "error" in ret_type
 
@@ -166,32 +275,24 @@ def generate_test_stub(func_info: dict, target_pkg: str = "fixtures") -> str:
         lines.append(f"    // TODO: set want = expected value")
         lines.append("")
 
-    # Call the function under test
-    call_parts = [name]
+    # Build the function call
     if is_method:
         # For a method, we'd need a receiver instance
         recv_type = receiver.split()[-1]  # "p *Person" → "Person"
-        lines.append(f"    // receiver := &{recv_type}{{}}  // TODO: initialise receiver")
-        call_parts = [f"receiver.{name}"]
+        lines.append(f"    // receiver := &{recv_type}{{}}  // TODO: initialize receiver")
 
-    call_sig = sig[sig.index("("):sig.rindex(")") + 1]  # "(a, b int)"
-    call = f"    got := {name}{call_sig}"
-    if is_method:
-        recv_type = receiver.split()[-1]
-        lines.append(f"    // receiver := &{recv_type}{{}}  // TODO: initialise receiver")
-        call = f"    got := receiver.{name}{call_sig}"
-
-    if param_names:
-        params_str = ", ".join(f"<{p}>" if not is_method and i == 0 else p
-                                for i, p in enumerate(param_names))
-        # First param for method is already captured as receiver
-        if is_method and param_names:
-            params_str = ", ".join(f"<{p}>" for p in param_names)
-        call = f"    got := {name}({params_str})"
-        if is_method:
-            recv_type = receiver.split()[-1]
+        if param_names:
             params_str = ", ".join(f"<{p}>" for p in param_names)
             call = f"    got := receiver.{name}({params_str})"
+        else:
+            call = f"    got := receiver.{name}()"
+    else:
+        # Top-level function
+        if param_names:
+            params_str = ", ".join(f"<{p}>" for p in param_names)
+            call = f"    got := {name}({params_str})"
+        else:
+            call = f"    got := {name}()"
 
     lines.append(f"    {call}")
     lines.append("")
@@ -362,15 +463,12 @@ def generate_test_stub_method(func_info: dict, target_pkg: str = "fixtures") -> 
     receiver = func_info.get("receiver", "")
 
     test_name = _to_test_name(name)
-    param_names = _param_names(sig)
 
-    # Parse return type from signature
-    ret_type = ""
-    if ")" in sig:
-        paren_end = sig.index(")")
-        ret_type = sig[paren_end + 1:].strip()
-    
-    # Check if error is in return types (for multi-return like (int, error))
+    # Use the new helper - methods have is_method=True
+    param_names = _extract_params_from_signature(sig, is_method=True)
+    ret_type = _extract_return_type(sig, is_method=True)
+
+    # Check if error is in return types
     returns_error = "error" in ret_type
 
     # Extract receiver type
