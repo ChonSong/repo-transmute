@@ -434,7 +434,7 @@ def _generate_go_tests(chunk_files: List[Path]) -> str:
             for func_name in matches:
                 test_lines.append(f"func Test{func_name}(t *testing.T) {{")
                 test_lines.append(f"    // TODO: Test {func_name}")
-                test_lines.append(f"    t.Log(\"%s not yet tested\", func_name)")
+                test_lines.append(f"    t.Logf(\"%s not yet tested\", func_name)")
                 test_lines.append("}")
                 test_lines.append("")
 
@@ -444,7 +444,7 @@ def _generate_go_tests(chunk_files: List[Path]) -> str:
             for type_name in type_matches:
                 test_lines.append(f"func TestNew{type_name}(t *testing.T) {{")
                 test_lines.append(f"    // TODO: Test {type_name} constructor")
-                test_lines.append(f"    t.Log(\"New%s not yet tested\", type_name)")
+                test_lines.append(f"    t.Logf(\"New%s not yet tested\", type_name)")
                 test_lines.append("}")
                 test_lines.append("")
 

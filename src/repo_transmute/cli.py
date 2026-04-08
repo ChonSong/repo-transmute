@@ -831,6 +831,73 @@ def notebook(repo, repo_opt, notebook_dir):
     click.echo(click.style(f"\n✅ Notebook entry shown", fg="green"))
 
 
+@cli.command('notebook-diff')
+@click.argument('repo', required=True)
+@click.option('--chunk-id', '-c', type=int, default=None, help="Chunk ID to diff (default: newest chunk with multiple entries)")
+@click.option('--older', '-o', type=int, default=None, help="Show the Nth-older entry (default: 2nd-newest)")
+@click.option('--newer', '-n', type=int, default=None, help="Show the Nth-newer entry (default: newest)")
+@click.option('--notebook-dir', '-d', type=click.Path(path_type=Path), default=DEFAULT_NOTEBOOK_DIR, help='Notebook store directory')
+def notebook_diff(repo, chunk_id, older, newer, notebook_dir):
+    """Show a diff between two notebook entries for the same chunk.
+
+    By default, compares the two most recent entries for the same chunk_id
+    in the given repo — useful for reviewing how model changes or prompt
+    tweaks affected the transpiled output.
+
+    Examples:
+        repo-transmute notebook-diff HKUDS/nanobot           # diff 2 most recent entries
+        repo-transmute notebook-diff HKUDS/nanobot -c 0      # diff chunk 0 specifically
+        repo-transmute notebook-diff HKUDS/nanobot -c 2 -o 2  # 2nd-oldest vs newest for chunk 2
+    """
+    store = NotebookStore(store_dir=notebook_dir)
+
+    if older is not None and newer is not None and older == newer:
+        raise click.ClickException('--older and --newer must differ')
+
+    if chunk_id is not None:
+        entries = store.list_by_chunk_id(repo, chunk_id)
+    else:
+        # Find the chunk_id with the most entries (richest diff history)
+        all_entries = store.list_by_repo(repo)
+        from collections import Counter
+        chunk_counts = Counter(e.chunk_id for e in all_entries)
+        if not chunk_counts:
+            raise click.ClickException(f'No notebook entries for {repo}')
+        chunk_id = chunk_counts.most_common(1)[0][0]
+        entries = store.list_by_chunk_id(repo, chunk_id)
+
+    if len(entries) < 2:
+        raise click.ClickException(
+            f'Not enough entries for diff. Found {len(entries)} entry/entries for '
+            f'repo={repo} chunk_id={chunk_id} (need at least 2).'
+        )
+
+    # Resolve older/newer indices
+    newer_idx = newer if newer is not None else -1
+    older_idx = older if older is not None else -2
+
+    try:
+        older_entry = entries[older_idx]
+        newer_entry = entries[newer_idx]
+    except IndexError as e:
+        raise click.ClickException(
+            f'Index out of range: --older={older_idx} or --newer={newer_idx} '
+            f'for {len(entries)} entries'
+        ) from e
+
+    if older_entry.uid == newer_entry.uid:
+        raise click.ClickException('Older and newer entries are the same — nothing to diff.')
+
+    diff_text = store.diff_entries(older_entry, newer_entry)
+
+    click.echo(f'Diff: {older_entry.uid} → {newer_entry.uid}')
+    click.echo(f'Chunk: {older_entry.chunk_id} | Language: {older_entry.language} → {older_entry.target_lang}')
+    click.echo(f'Passes: {len(older_entry.passes)} → {len(newer_entry.passes)}')
+    click.echo('-' * 60)
+    click.echo(diff_text)
+    click.echo(click.style(f'✅ Diff complete', fg='green'))
+
+
 @cli.command()
 def status():
     """Show status and statistics."""

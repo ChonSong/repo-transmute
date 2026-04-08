@@ -9,6 +9,7 @@ Each "notebook entry" captures:
 This allows replay, diff, and audit of every transpilation.
 """
 
+import difflib
 import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -232,6 +233,65 @@ class NotebookStore:
         if limit:
             entries = entries[-limit:]
         return entries
+
+    def list_by_chunk_id(
+        self,
+        repo: str,
+        chunk_id: int,
+    ) -> List[NotebookEntry]:
+        """Return all entries for a given repo and chunk_id, oldest first.
+
+        Use this to compare successive transpilation runs for the same chunk.
+        """
+        entries = self.list_by_repo(repo)
+        return [e for e in entries if e.chunk_id == chunk_id]
+
+    def diff_entries(
+        self,
+        older: NotebookEntry,
+        newer: NotebookEntry,
+        *,
+        context_lines: int = 3,
+    ) -> str:
+        """Return a unified diff between two notebook entries.
+
+        Compares final_code from both entries.  If the two entries have
+        a different number of passes, the pass counts are also noted.
+        """
+        if older.uid == newer.uid:
+            return "(same entry — no diff)"
+
+        older_lines = older.final_code.splitlines()
+        newer_lines = newer.final_code.splitlines()
+
+        diff_lines = difflib.unified_diff(
+            older_lines,
+            newer_lines,
+            fromfile=f"old: {older.uid}",
+            tofile=f"new: {newer.uid}",
+            n=context_lines,
+        )
+        diff_text = "\n".join(diff_lines)
+
+        # Include pass-count note if it differs
+        notes: List[str] = []
+        if len(older.passes) != len(newer.passes):
+            notes.append(
+                f"  Pass count: {len(older.passes)} → {len(newer.passes)}"
+            )
+        old_model = older.passes[0].model if older.passes else ""
+        new_model = newer.passes[0].model if newer.passes else ""
+        if old_model != new_model:
+            notes.append(f"  Model: {old_model} → {new_model}")
+
+        if not diff_text and notes:
+            return "\n".join(notes) + "\n  (no code changes)"
+        elif not diff_text:
+            return "(no code changes)"
+        elif notes:
+            return "\n".join(notes) + "\n" + diff_text
+        else:
+            return diff_text
 
     def list_by_tag(
         self,
