@@ -142,7 +142,7 @@ class Transpiler:
             "temperature": 0.1
         }
 
-        response = requests.post(url, headers=headers, json=data, timeout=180)
+        response = requests.post(url, headers=headers, json=data, timeout=300)
         response.raise_for_status()
         result = response.json()
         return result["choices"][0]["message"]["content"]
@@ -169,7 +169,7 @@ class Transpiler:
             "temperature": 0.1
         }
 
-        response = requests.post(url, headers=headers, json=data, timeout=180)
+        response = requests.post(url, headers=headers, json=data, timeout=300)
         response.raise_for_status()
         result = response.json()
         content = result["choices"][0]["message"]["content"]

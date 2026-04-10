@@ -1,4 +1,4 @@
-"""Dependency resolution for TypeScript/JavaScript module graphs."""
+"""Dependency resolution for TypeScript/JavaScript/Python/Go module graphs."""
 
 import re
 import sqlite3
@@ -6,9 +6,12 @@ from pathlib import Path
 from typing import List, Optional, Dict, Set
 
 
-# Regex patterns for various import/export syntaxes.
-# Order matters: more specific patterns should come before general ones.
-IMPORT_REGEXES = [
+# ---------------------------------------------------------------------------
+# Import/export regex patterns — language-specific
+# ---------------------------------------------------------------------------
+
+# TypeScript / JavaScript
+JS_TS_IMPORT_REGEXES = [
     # import * as X from 'Y'  (wildcard namespace import — before named import)
     re.compile(r"import\s+\*\s+as\s+[\w]+\s+from\s+['\"]([^'\"]+)['\"]"),
     # import { X, Y, Z } from 'Y'  (named imports)
@@ -23,25 +26,36 @@ IMPORT_REGEXES = [
     re.compile(r"require\s*\(\s*['\"]([^'\"]+)['\"]\s*\)"),
 ]
 
+# Python: import X, from X import Y, import X as Y
+PYTHON_IMPORT_REGEXES = [
+    # from x.y import a, from x.y import (a, b)
+    re.compile(r"^from\s+((?:\w+\.)*\w+)\s+import", re.MULTILINE),
+    # import x, import x.y, import x.y as z
+    re.compile(r"^import\s+((?:\w+\.)*\w+)", re.MULTILINE),
+]
 
-def parse_imports(file_path: Path) -> List[str]:
-    """
-    Parse TypeScript/JavaScript import/export statements from a file.
+# Go: import "x", import "x/y", import p "x/y"
+GO_IMPORT_REGEXES = [
+    # import "x/y" or import "x"
+    re.compile(r"import\s+\"([^\"]+)\""),
+    # import p "x/y" (aliased)
+    re.compile(r"import\s+\w+\s+\"([^\"]+)\""),
+    # import (
+    #   "x/y"
+    # )
+    re.compile(r"import\s*\(([^)]+)\)"),
+]
 
-    Matches:
-    - import X from 'Y'
-    - import { X, Y } from 'Z'
-    - import * as X from 'Y'
-    - import('Y') - dynamic imports
-    - export from 'Y'
-    - export * from 'Y'
-    - require('Y')
+
+def parse_imports(file_path: Path, language: Optional[str] = None) -> List[str]:
+    """Parse import statements from a source file.
 
     Args:
-        file_path: Path to the .ts/.js file
+        file_path: Path to the source file
+        language: Source language (js/typescript/python/go). If None, inferred from extension.
 
     Returns:
-        List of imported module paths
+        List of imported module/package paths
     """
     imports = []
 
@@ -50,20 +64,84 @@ def parse_imports(file_path: Path) -> List[str]:
     except (UnicodeDecodeError, OSError):
         return imports
 
-    # Remove comments to avoid false positives
-    # Remove single-line comments
-    content = re.sub(r"//.*?$", "", content, flags=re.MULTILINE)
-    # Remove multi-line comments
-    content = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
+    # Infer language from extension if not provided
+    if language is None:
+        language = _infer_language(file_path)
 
-    for pattern in IMPORT_REGEXES:
-        for match in pattern.finditer(content):
-            module = match.group(1)
-            # Include all imports (relative and external)
-            imports.append(module)
+    # Remove comments to avoid false positives
+    if language in ("javascript", "typescript"):
+        content = _strip_js_comments(content)
+    elif language == "python":
+        content = _strip_python_comments(content)
+
+    if language == "go":
+        imports.extend(_parse_go_imports(content))
+    elif language == "python":
+        imports.extend(_parse_python_imports(content))
+    else:
+        # JavaScript / TypeScript (default)
+        for pattern in JS_TS_IMPORT_REGEXES:
+            for match in pattern.finditer(content):
+                imports.append(match.group(1))
 
     return imports
 
+
+def _infer_language(file_path: Path) -> str:
+    """Infer language from file extension."""
+    ext = file_path.suffix.lower()
+    mapping = {
+        ".ts": "typescript",
+        ".tsx": "typescript",
+        ".js": "javascript",
+        ".jsx": "javascript",
+        ".py": "python",
+        ".go": "go",
+    }
+    return mapping.get(ext, "javascript")
+
+
+def _strip_js_comments(content: str) -> str:
+    """Remove JS/TS comments from content."""
+    content = re.sub(r"//.*?$", "", content, flags=re.MULTILINE)
+    content = re.sub(r"/\*.*?\*/", "", content, flags=re.DOTALL)
+    return content
+
+
+def _strip_python_comments(content: str) -> str:
+    """Remove Python comments from content."""
+    content = re.sub(r"#.*?$", "", content, flags=re.MULTILINE)
+    return content
+
+
+def _parse_python_imports(content: str) -> List[str]:
+    """Parse Python import statements."""
+    imports = []
+    for pattern in PYTHON_IMPORT_REGEXES:
+        for match in pattern.finditer(content):
+            imports.append(match.group(1))
+    return imports
+
+
+def _parse_go_imports(content: str) -> List[str]:
+    """Parse Go import statements."""
+    imports = []
+    # Handle import blocks
+    block_match = re.search(r"import\s*\(([^)]+)\)", content, re.DOTALL)
+    if block_match:
+        block_content = block_match.group(1)
+        for im in re.findall(r"\"([^\"]+)\"", block_content):
+            imports.append(im)
+    else:
+        for pattern in GO_IMPORT_REGEXES:
+            for match in pattern.finditer(content):
+                imports.append(match.group(1))
+    return imports
+
+
+# ---------------------------------------------------------------------------
+# DependencyGraph
+# ---------------------------------------------------------------------------
 
 class DependencyGraph:
     """Build and query module dependency relationships."""
@@ -78,15 +156,37 @@ class DependencyGraph:
         path = path.resolve() if path.is_absolute() else path
         self.nodes[path] = imports
 
+    def build_reverse_index(self) -> None:
+        """Build the reverse import index (imported_by map).
+
+        Must be called after all files are added via add_file().
+        """
+        self.reverse.clear()
+        for file_path in self.nodes:
+            self.reverse.setdefault(file_path, set())
+
+        for file_path in self.nodes:
+            for imp in self.nodes[file_path]:
+                resolved = self.resolve_import(Path(imp), file_path)
+                if resolved and resolved in self.nodes:
+                    self.reverse.setdefault(resolved, set()).add(file_path)
+
     def resolve_import(self, import_path: Path, importer: Path) -> Optional[Path]:
-        """Try to resolve an import path to an actual file."""
+        """Try to resolve an import path to an actual file.
+
+        Resolves relative imports (./foo, ../foo) and bare identifiers (foo/bar)
+        to actual files by trying common extensions.
+
+        External packages (react, lodash) won't resolve — they don't exist locally.
+        """
         if self.root is None:
             return None
 
-        if str(import_path).startswith("."):
+        # Resolve for all non-absolute paths
+        if not import_path.is_absolute():
             base = importer.parent
             for ext in (
-                ".ts", ".tsx", ".js", ".jsx",
+                ".ts", ".tsx", ".js", ".jsx", ".py", ".go",
                 "/index.ts", "/index.js", "/index.tsx", "/index.jsx",
             ):
                 if ext.startswith("/"):
@@ -172,6 +272,10 @@ class DependencyGraph:
 
         return chunk
 
+
+# ---------------------------------------------------------------------------
+# ProcessQueue
+# ---------------------------------------------------------------------------
 
 class ProcessQueue:
     """Queue system for processing repositories in dependency order."""

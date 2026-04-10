@@ -200,3 +200,127 @@ class TestProcessQueue:
         item = q.get_next()
         # Second add with different priority should update
         assert item["priority"] == 5
+
+
+# ---------------------------------------------------------------------------
+# parse_imports — Python
+# ---------------------------------------------------------------------------
+
+class TestParseImportsPython:
+    def make(self, content: str) -> Path:
+        p = Path(tempfile.mktemp(suffix=".py"))
+        p.write_text(content)
+        return p
+
+    def test_import_module(self):
+        p = self.make("import os\nimport sys\n")
+        imports = parse_imports(p)
+        assert "os" in imports
+        assert "sys" in imports
+
+    def test_from_import(self):
+        p = self.make("from foo import bar\n")
+        assert "foo" in parse_imports(p)
+
+    def test_from_import_nested(self):
+        p = self.make("from foo.bar import baz\nfrom a.b.c import d\n")
+        imports = parse_imports(p)
+        assert "foo.bar" in imports
+        assert "a.b.c" in imports
+
+    def test_import_module_alias(self):
+        p = self.make("import os as operating_system\n")
+        imports = parse_imports(p)
+        assert "os" in imports
+
+    def test_comment_not_false_positive(self):
+        p = self.make("# import os\nimport sys\n")
+        imports = parse_imports(p)
+        assert "os" not in imports
+        assert "sys" in imports
+
+
+# ---------------------------------------------------------------------------
+# parse_imports — Go
+# ---------------------------------------------------------------------------
+
+class TestParseImportsGo:
+    def make(self, content: str) -> Path:
+        p = Path(tempfile.mktemp(suffix=".go"))
+        p.write_text(content)
+        return p
+
+    def test_import_single(self):
+        p = self.make('package main\nimport "fmt"\n')
+        imports = parse_imports(p)
+        assert "fmt" in imports
+
+    def test_import_multiple(self):
+        p = self.make('package main\nimport "fmt"\nimport "os"\n')
+        imports = parse_imports(p)
+        assert "fmt" in imports
+        assert "os" in imports
+
+    def test_import_block(self):
+        p = self.make('package main\nimport (\n  "fmt"\n  "os"\n)\n')
+        imports = parse_imports(p)
+        assert "fmt" in imports
+        assert "os" in imports
+
+    def test_import_aliased(self):
+        p = self.make('package main\nimport f "fmt"\n')
+        imports = parse_imports(p)
+        assert "fmt" in imports
+
+
+# ---------------------------------------------------------------------------
+# DependencyGraph — reverse index
+# ---------------------------------------------------------------------------
+
+
+
+# ---------------------------------------------------------------------------
+# DependencyGraph — reverse index
+# ---------------------------------------------------------------------------
+
+class TestDependencyGraphReverse:
+    def test_reverse_index_basic(self):
+        """Test that build_reverse_index correctly maps importers to imported files.
+
+        Uses a real temp directory so resolve_import can find actual files.
+        """
+        import tempfile, shutil
+        tmp = tempfile.mkdtemp()
+        root = Path(tmp)
+
+        (root / "a.ts").write_text('import { b } from "./b";')
+        (root / "b.ts").write_text("")
+
+        g = DependencyGraph(root=root)
+        g.add_file(root / "a.ts", ["./b"])
+        g.add_file(root / "b.ts", [])
+        g.build_reverse_index()
+
+        # a.ts imports b.ts => b.ts should have a.ts as an importer in reverse index
+        assert root / "a.ts" in g.reverse[root / "b.ts"], (
+            f"a.ts should be reverse-dependent on b.ts, got {g.reverse}"
+        )
+
+        shutil.rmtree(tmp)
+
+    def test_reverse_index_self_ref(self):
+        """A file that imports nothing still gets an entry in reverse (empty set)."""
+        g = DependencyGraph()
+        g.add_file(Path("a.ts"), [])
+        g.build_reverse_index()
+        # A file with no imports still appears in reverse index (empty set)
+        assert Path("a.ts") in g.reverse
+        assert g.reverse[Path("a.ts")] == set()
+
+    def test_reverse_index_external_no_resolve(self):
+        """External packages that can't be resolved don't pollute reverse index."""
+        g = DependencyGraph()
+        g.add_file(Path("a.ts"), ["react", "lodash"])
+        g.build_reverse_index()
+        # Since these can't be resolved locally, reverse should only have self-ref
+        assert Path("a.ts") in g.reverse
