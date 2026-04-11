@@ -1186,3 +1186,25 @@ class TestCliSearchIntegration:
         runner = CliRunner()
         result = runner.invoke(cli, ["search", "--help"])
         assert "--explain" in result.output
+
+
+class TestStatusCommand:
+    """Test the status command's TXTAI index detection."""
+
+    def test_status_shows_txai_index_when_config_json_exists(self):
+        """status should detect the TXTAI index via config.json even when index.faiss is absent.
+
+        txtai 6.x saves the index as embeddings/ rather than index.faiss,
+        but the presence of config.json is a sufficient signal that load()
+        will succeed. Uses the default data/txtai dir.
+        """
+        from repo_transmute.cli import cli
+        from click.testing import CliRunner
+        runner = CliRunner()
+        result = runner.invoke(cli, ["status"])
+        output = result.output
+        # Should show document count, not the "not built yet" message
+        assert "TXTAI index: not built yet" not in output
+        assert "12181 documents indexed" in output
+        # Should list some repos (the fix makes TxtaiClient load successfully)
+        assert "Repos indexed:" in output

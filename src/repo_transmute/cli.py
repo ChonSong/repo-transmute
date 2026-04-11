@@ -922,9 +922,10 @@ def status():
 
     # TXTAI index stats
     index_dir = Path(index_dir)
-    if (index_dir / "index.faiss").exists():
+    if (index_dir / "config.json").exists():
         try:
-            client = TxtaiClient(index_dir=index_dir)
+            client = TxtaiClient(index_dir=index_dir, autoload=False)
+            client.load()
             count = client.count()
             click.echo(f"TXTAI index: {count} documents indexed")
             bp_search = BlueprintSearch(client)
