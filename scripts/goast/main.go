@@ -47,9 +47,9 @@ type InterfaceOutput struct {
 }
 
 type Output struct {
-	Functions  []FuncOutput   `json:"functions"`
-	Structs    []StructOutput `json:"structs"`
-	Interfaces []InterfaceOutput `json:"interfaces"`
+	Functions  []FuncOutput        `json:"functions"`
+	Structs    []StructOutput      `json:"structs"`
+	Interfaces []InterfaceOutput   `json:"interfaces"`
 }
 
 func typeString(t ast.Expr) string {
@@ -146,12 +146,87 @@ func receiverString(f *ast.FuncDecl) string {
 	return fieldListString(f.Recv)
 }
 
+// collectInterfaceTypes builds a map of interface name -> *ast.InterfaceType for all
+// interface types declared in the file. This is needed to resolve embedded interface
+// references (e.g., "type ReadWriter interface { Reader }") where Reader is an
+// *ast.Ident that must be looked up in the file's type declarations.
+func collectInterfaceTypes(file *ast.File) map[string]*ast.InterfaceType {
+	result := make(map[string]*ast.InterfaceType)
+	for _, decl := range file.Decls {
+		d, ok := decl.(*ast.GenDecl)
+		if !ok || d.Tok != token.TYPE {
+			continue
+		}
+		for _, spec := range d.Specs {
+			ts, ok := spec.(*ast.TypeSpec)
+			if !ok {
+				continue
+			}
+			if it, ok := ts.Type.(*ast.InterfaceType); ok {
+				result[ts.Name.Name] = it
+			}
+		}
+	}
+	return result
+}
+
+// extractMethodsFromInterface extracts all methods from an interface type.
+// If embedded is true, it recursively collects methods from embedded interfaces
+// (avoiding infinite loops via the visited set).
+func extractMethodsFromInterface(iface *ast.InterfaceType, ifaceTypes map[string]*ast.InterfaceType, visited map[string]bool) []MethodOutput {
+	var methods []MethodOutput
+	if iface.Methods == nil {
+		return methods
+	}
+	for _, m := range iface.Methods.List {
+		if len(m.Names) == 0 {
+			// Embedded interface: could be *ast.InterfaceType (inline) or *ast.Ident (reference)
+			switch t := m.Type.(type) {
+			case *ast.InterfaceType:
+				// Inline anonymous interface e.g. interface { interface { Read() } }
+				// Recursively collect from the inline type
+				embeddedName := "_embedded_" + fmt.Sprintf("%p", t)
+				if !visited[embeddedName] {
+					visited[embeddedName] = true
+					methods = append(methods, extractMethodsFromInterface(t, ifaceTypes, visited)...)
+				}
+			case *ast.Ident:
+				// Reference to a named interface defined elsewhere in the file
+				if embeddedIface, ok := ifaceTypes[t.Name]; ok {
+					if !visited[t.Name] {
+						visited[t.Name] = true
+						methods = append(methods, extractMethodsFromInterface(embeddedIface, ifaceTypes, visited)...)
+						visited[t.Name] = false
+					}
+				}
+			}
+			continue
+		}
+		// Named method
+		mname := m.Names[0].Name
+		msig := ""
+		if m.Type != nil {
+			if ft, ok := m.Type.(*ast.FuncType); ok {
+				msig = typeStringFunc(ft)
+			}
+		}
+		methods = append(methods, MethodOutput{
+			Name:      mname,
+			Signature: msig,
+		})
+	}
+	return methods
+}
+
 func extractFuncsAndMethods(file *ast.File) ([]FuncOutput, []StructOutput, []InterfaceOutput) {
 	var funcs []FuncOutput
 	var structs []StructOutput
 	var interfaces []InterfaceOutput
 
 	seenFuncs := make(map[string]bool)
+
+	// Collect all interface types for embedded interface resolution
+	ifaceTypes := collectInterfaceTypes(file)
 
 	for _, decl := range file.Decls {
 		switch d := decl.(type) {
@@ -232,44 +307,8 @@ func extractFuncsAndMethods(file *ast.File) ([]FuncOutput, []StructOutput, []Int
 						})
 
 					case *ast.InterfaceType:
-						var methods []MethodOutput
-						if v.Methods != nil {
-							for _, m := range v.Methods.List {
-								// Embedded interface: no Names → walk the embedded type
-								if len(m.Names) == 0 {
-									if embedded, ok := m.Type.(*ast.InterfaceType); ok {
-										for _, em := range embedded.Methods.List {
-											emname := "_"
-											if len(em.Names) > 0 {
-												emname = em.Names[0].Name
-											}
-											emsig := ""
-											if em.Type != nil {
-												if ft, ok := em.Type.(*ast.FuncType); ok {
-													emsig = typeStringFunc(ft)
-												}
-											}
-											methods = append(methods, MethodOutput{
-												Name:      emname,
-												Signature: emsig,
-											})
-										}
-									}
-									continue
-								}
-								mname := m.Names[0].Name
-								msig := ""
-								if m.Type != nil {
-									if ft, ok := m.Type.(*ast.FuncType); ok {
-										msig = typeStringFunc(ft)
-									}
-								}
-								methods = append(methods, MethodOutput{
-									Name:      mname,
-									Signature: msig,
-								})
-							}
-						}
+						visited := make(map[string]bool)
+						methods := extractMethodsFromInterface(v, ifaceTypes, visited)
 						interfaces = append(interfaces, InterfaceOutput{
 							Name:    ts.Name.Name,
 							Line:    line,
@@ -285,7 +324,7 @@ func extractFuncsAndMethods(file *ast.File) ([]FuncOutput, []StructOutput, []Int
 	// Sort by line number for stable output
 	sort.Slice(funcs, func(i, j int) bool { return funcs[i].Line < funcs[j].Line })
 	sort.Slice(structs, func(i, j int) bool { return structs[i].Line < structs[j].Line })
-	sort.Slice(interfaces, func(i, j int) bool { return interfaces[i].Line < interfaces[j].Line })
+	sort.Slice(interfaces, func(i, j int) bool { return interfaces[i].Line < structs[j].Line })
 
 	return funcs, structs, interfaces
 }
@@ -311,7 +350,7 @@ func main() {
 
 	out := Output{
 		Functions:  funcs,
-		Structs:   structs,
+		Structs:    structs,
 		Interfaces: interfaces,
 	}
 
