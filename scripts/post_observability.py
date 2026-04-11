@@ -20,7 +20,7 @@ from pathlib import Path
 REPO_TRANSMUTE = Path(__file__).parent.parent
 DATA_DIR = REPO_TRANSMUTE / "data"
 
-DISCORD_CHANNEL = "night-owl-reports"
+DISCORD_CHANNEL = "evaluator-alerts"
 STATUS_FILES = {
     "stale": DATA_DIR / "_repo_stale_status.json",
     "reingest": DATA_DIR / "_repo_reingest_status.json",
