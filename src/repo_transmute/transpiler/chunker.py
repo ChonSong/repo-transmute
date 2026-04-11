@@ -92,6 +92,46 @@ def extract_exports(file_path: Path) -> List[str]:
         return []
 
 
+def _symbol_from_qualified_import(imp: str) -> Optional[str]:
+    """Extract a bare symbol name from a qualified Python import.
+
+    ``extract_imports`` stores imports as qualified dotted paths:
+      'from mod0.helper import User'  ->  'mod0.helper.User'
+      'from os.path import join'      ->  'os.path.join'
+
+    Exports stored by ``extract_exports`` are bare symbol names: 'User', 'join'.
+
+    This function reverses the qualification to recover the bare symbol, so that
+    cross-chunk dependency detection can match them.
+
+    Returns the last dotted component if it looks like a Python identifier
+    ( CamelCase for classes, snake_case for functions ), otherwise None.
+    Stdlib paths like 'os.path.join' are filtered out by checking whether the
+    leading component is a known stdlib package.
+    """
+    if '.' not in imp:
+        return None
+    parts = imp.rsplit('.', 1)
+    last = parts[-1]
+    # Must look like a Python identifier
+    if not re.match(r'^[A-Za-z_]\w*$', last):
+        return None
+    # Filter stdlib paths: 'os.path.join' -> 'join', but os.path is stdlib
+    # We detect this conservatively by checking the first component
+    first = imp.split('.')[0]
+    stdlib = {
+        'os', 'sys', 're', 'json', 'typing', 'pathlib', 'asyncio',
+        'collections', 'contextlib', 'copy', 'dataclasses', 'datetime',
+        'enum', 'functools', 'inspect', 'itertools', 'logging', 'math',
+        'operator', 'pickle', 'queue', 'random', 'shutil', 'statistics',
+        'string', 'struct', 'tempfile', 'threading', 'time', 'traceback',
+        'types', 'unittest', 'urllib', 'uuid', 'warnings', 'weakref',
+    }
+    if first in stdlib:
+        return None
+    return last
+
+
 def chunk_by_files(files: List[Path], max_functions: int = 30) -> List[List[Path]]:
     """
     Group files into chunks that respect module boundaries.
@@ -170,17 +210,35 @@ def create_chunks(files: List[Path], base_path: Optional[Path] = None, max_funct
             imports=sorted(all_imports), exports=sorted(all_exports), dependencies=[]
         ))
 
+    # Cross-chunk dependency detection.
+    #
+    # Problem: ``extract_imports`` stores qualified names (e.g. 'mod0.helper.User')
+    # while ``extract_exports`` stores bare symbol names (e.g. 'User').  A naive
+    # 'export in imports' check therefore never matches cross-chunk dependencies.
+    #
+    # Fix: for each qualified import, strip the leading dotted prefix to recover
+    # the bare symbol name and check whether that symbol is exported by another
+    # chunk.  Stdlib imports (os.path.join, etc.) are excluded.
+    #
+    # Example:
+    #   chunk0 exports:    ['helper', 'User']
+    #   chunk1 imports:    ['mod0.helper.User', 'os.path.join']
+    #   chunk1 symbols:    ['User']           (strip prefix)
+    #   Match: 'User' in chunk0.exports -> chunk1 depends on chunk0
+    #   'os.path.join' stripped -> 'join' not in any export -> not a dep
+    #
     for i, chunk in enumerate(chunks):
-        chunk_imports = set(chunk.imports)
-        for j, other_chunk in enumerate(chunks):
-            if i != j and j < i:
-                for export in other_chunk.exports:
-                    if export in chunk_imports:
-                        if j not in chunk.dependencies:
-                            chunk.dependencies.append(j)
-
-    for chunk in chunks:
-        chunk.dependencies.sort()
+        found_deps: Set[int] = set()
+        for imp in chunk.imports:
+            sym = _symbol_from_qualified_import(imp)
+            if sym is None:
+                continue
+            for j, other in enumerate(chunks):
+                if i == j or j in found_deps:
+                    continue
+                if sym in other.exports:
+                    found_deps.add(j)
+        chunk.dependencies = sorted(found_deps)
 
     return chunks
 

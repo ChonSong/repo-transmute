@@ -129,6 +129,52 @@ class TestCreateChunks:
         assert main in all_files
 
 
+    def test_cross_chunk_dep_with_qualified_imports(self, tmp_path):
+        """Cross-chunk dependency is detected when imports use qualified names."""
+        pkg0 = tmp_path / 'pkg0'
+        pkg1 = tmp_path / 'pkg1'
+        pkg0.mkdir()
+        pkg1.mkdir()
+
+        f0 = pkg0 / 'api.py'
+        f0.write_text('def helper(): pass\ndef other(): pass\n')
+
+        f1 = pkg1 / 'main.py'
+        f1.write_text('from pkg0.api import helper, other\ndef app(): pass\n')
+
+        chunks = create_chunks(
+            [f0, f1], base_path=tmp_path, max_functions=1
+        )
+
+        assert len(chunks) == 2, f'Expected 2 chunks, got {len(chunks)}'
+
+        chunk1 = chunks[1]
+        assert 0 in chunk1.dependencies, (
+            f'chunk1 should depend on chunk0, got {chunk1.dependencies}'
+        )
+
+    def test_cross_chunk_dep_excludes_stdlib_imports(self, tmp_path):
+        """Stdlib imports (os.path.join) are not treated as cross-chunk deps."""
+        pkg0 = tmp_path / 'pkg0'
+        pkg1 = tmp_path / 'pkg1'
+        pkg0.mkdir()
+        pkg1.mkdir()
+
+        f0 = pkg0 / 'util.py'
+        f0.write_text('def myutil(): pass\ndef helper(): pass\n')
+
+        f1 = pkg1 / 'main.py'
+        f1.write_text('from os.path import join\ndef app(): pass\n')
+
+        chunks = create_chunks([f0, f1], base_path=tmp_path, max_functions=1)
+        assert len(chunks) == 2
+
+        chunk1 = chunks[1]
+        assert 0 not in chunk1.dependencies, (
+            f'os.path.join is stdlib, got deps={chunk1.dependencies}'
+        )
+
+
 # ---------------------------------------------------------------------------
 # Tests: chunk_repository — integration with real repos
 # ---------------------------------------------------------------------------
