@@ -1,56 +1,67 @@
-# Night Owl — RepoTransmute
+# HEARTBEAT.md — RepoTransmute / Zoul Night Owl
 
-**Last updated:** 2026-04-11T04:11 UTC (Saturday night)
-**Agent:** Night Owl (zoul)
-**Session:** cron:74e1c3a5-ea20-471f-99d9-b830350fa24e
+## System Status
 
-## Current Status
+- **TXTAI Index**: ✅ Built (12,181 docs, 11 repos)
+- **Pipeline**: ✅ Working (541 tests pass)
+- **Nightly cron**: ✅ Active (runs ~6:30 UTC each night)
 
-RepoTransmute is in active development. All 539 tests pass. Night Owl is initialized and running.
+## No active priorities — awaiting Sean direction
 
-## Priority Stack (from ROADMAP.md)
+The system is in good working order. All phases are complete.
 
-### HIGH Priority
+## Recent Work
 
-1. **Fix chunked processing (process ALL chunks)**
-   - The `_topological_sort` in `Reassembler` only considers chunks in `transpiled.keys()` when computing order. If a chunk fails, `combine()` may produce incomplete output.
-   - `transpile_all_chunks` loop iterates ALL `chunk_order` chunks correctly (exception handling with `continue`).
-   - Root issue: `combine()` uses `_topological_sort()` which filters to `transpiled.keys()`. A failed chunk is not in `transpiled` so `combine()` never includes it.
-   - Also: dependency detection in `create_chunks` uses `j < i` constraint and doesn't detect cross-chunk imports when Python import `from mod0 import helper` has module prefix (stored as `mod0.helper`) vs export `helper` — no match.
-   - **Status: Needs deeper investigation + fix**
+- **2026-04-11 (Night Owl)**: ClawFlow orchestration — RepoTransmute heartbeat lobster workflow implemented (Phase 7 complete)
 
-2. **Add runtime test execution**
-   - `run_tests()` is wired into pipeline as Step 6.
-   - Need to verify it works end-to-end with real test commands for each language.
-   - **Status: Partially done, needs verification**
+- **2026-04-11 (Night Owl)**: Fixed `status` command to detect txtai 6.x index via `config.json` instead of `index.faiss`. Also added `TestStatusCommand` test. (Commit `69aefd9`)
 
-### MEDIUM Priority
+- **2026-04-11**: TXTAI hybrid search — Phase 8 complete
 
-3. **Preserve directory structure in output**
-   - Currently `write_files()` may flatten output. Needs to preserve source tree structure.
-   - **Status: Not started**
+- **2026-04-10 (evening)**: Fixed TXTAI `repos()`, `languages()`, `stats()`, and `cross_repo_patterns()` to use reliable batch metadata lookup instead of `search("*")` wildcard
 
-4. **Cross-chunk context**
-   - Pass context from previously transpiled chunks to the LLM for better cross-chunk references.
-   - **Status: Not started**
+- **2026-04-10**: Fixed `Reassembler.combine()` and `_split_into_file_units()` directory-structure bug (Night Owl session)
 
-## Go Support Status
+- **2026-04-08**: TXTAI index rebuilt, `notebook diff` CLI added
 
-✅ **Scaffold complete.** All 57 Go parser tests passing.
+## Phase 8 — TXTAI Hybrid Search (DONE)
 
-### Remaining Go Issues (from GO_SUPPORT_HANDOFF.md)
+Implemented as `TxtaiClient.hybrid_search()` + `BlueprintSearch.hybrid_search()`:
 
-- **Issue 1 (DUPLICATE NAMES):** `extract_from_go()` correctly skips methods via `is_method` check. Test `test_preserves_both_top_level_and_method_with_same_name` tests the INTERNAL function `_extract_go_function_bodies`, not `extract_from_go`. This may be a documentation mismatch — actual behavior is correct.
-- **Issue 2 (EMBEDDED INTERFACE `_` NAMES):** ✅ **FIXED 2026-04-11.** `ReadWriter` now correctly shows `Read` and `Write` methods from embedded `Reader`/`Writer`. The goast binary was rebuilt.
-- **Issue 3 (REGEX FALLBACK STUB):** `_extract_from_go_regex()` returns empty structs/interfaces. Graceful degradation works (falls back to empty). Could be improved but is low priority.
+- **BM25 keyword scoring** via `_bm25_score()` — pure Python, reads text from SQLite sidecar
+- **Semantic vector search** via existing txtai embeddings
+- **Min-max normalisation** of both score components before fusion
+- **Weighted sum** with configurable `semantic_weight` (default 0.7) / `keyword_weight` (default 0.3)
+- `semantic_limit=100` to get more candidates than final limit (improves keyword recall)
+- Result dict carries `semantic_score` and `keyword_score` alongside fused `score`
 
-## What's Been Done
+High-level API (`BlueprintSearch`):
+- `search(query, hybrid=True)` — shortcut flag
+- `hybrid_search(query, limit=10, semantic_weight=0.7, keyword_weight=0.3)` — explicit weights
+- `SearchHit.semantic_score` / `.keyword_score` attributes
+- `SearchResults.is_hybrid` flag (propagated through filter methods)
 
-- 2026-04-11: Fixed embedded interface extraction bug in `scripts/goast/main.go`. Added `collectInterfaceTypes()` and `extractMethodsFromInterface()` functions to properly resolve embedded interface references (e.g., `type ReadWriter interface { Reader Writer }`). Rebuilt `goast` binary. All 57 Go tests + 539 total tests pass.
-- 2026-04-11: Initialized Night Owl heartbeat and memory files.
+## Phase 7 — ClawFlow Orchestration (DONE 2026-04-11)
 
-## Notes
+Lobster workflow at `scripts/flows/repo_transmute_heartbeat.lobster`:
 
-- The `chunk_order` in `transpile_all_chunks` is pre-computed before any transpiling, so the loop iterates ALL chunks even if dependencies aren't tracked.
-- The goast binary lives at `scripts/goast/goast` and is built with `CGO_ENABLED=0 go build`.
-- Full test suite: `python3 -m pytest tests/ -q` → 539 passed, 8 skipped.
+```
+detect_stale (git remote HEAD vs local HEAD for each cached repo)
+  → reingest_stale (repo-transmute ingest for stale repos)
+    → run_index (TXTAI indexer, incremental)
+      → transpile_sample (transpile chunk 0 to validate pipeline)
+        → observability_report (post summary to Discord #night-owl-reports)
+```
+
+Supporting scripts in `scripts/`:
+- `check_repos_stale.py` — detect stale cached repos
+- `reingest_stale_repos.py` — re-ingest stale repos
+- `run_index.py` — run TXTAI indexer
+- `transpile_sample.py` — validate pipeline via sample transpile
+- `post_observability.py` — Discord observability summary
+
+## Phase 6 — Runtime Validation
+
+- [x] TXTAI index rebuilt (done)
+- [x] Discord alert step in lobster workflow — alert_and_halt sends to `#evaluator-alerts` when critical drift or critical oracle failure detected (in agent-interaction-evaluator-repo)
+- [x] ClawFlow orchestration (Phase 7 — done 2026-04-11)
