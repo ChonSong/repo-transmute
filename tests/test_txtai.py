@@ -731,6 +731,251 @@ class TestBlueprintSearch:
 
 
 # ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Hybrid Search tests
+# ---------------------------------------------------------------------------
+
+class TestHybridSearch:
+    """Tests for hybrid keyword + semantic search (BM25 + vector)."""
+
+    def test_hybrid_search_returns_both_score_components(self, txtai_client):
+        """Hybrid results should carry semantic_score and keyword_score."""
+        txtai_client.index([
+            {
+                "id": "hyb1",
+                "text": "function authenticate check JWT token",
+                "repo": "acme/app",
+                "language": "python",
+                "kind": "function",
+                "name": "authenticate",
+                "signature": "(token: str) -> bool",
+                "file": "auth.py",
+                "line": 10,
+                "docstring": "Verify a JWT token.",
+                "decorators": [],
+                "body": "return check_token(token)",
+            },
+            {
+                "id": "hyb2",
+                "text": "function send_email send notification email",
+                "repo": "acme/app",
+                "language": "python",
+                "kind": "function",
+                "name": "send_email",
+                "signature": "(to: str, subject: str) -> None",
+                "file": "email.py",
+                "line": 5,
+                "docstring": "Send an email.",
+                "decorators": [],
+                "body": "pass",
+            },
+        ])
+
+        search = BlueprintSearch(txtai_client)
+        results = search.hybrid_search("JWT token authenticate", limit=10)
+
+        assert len(results) >= 1
+        hit = results.hits[0]
+        assert hit.semantic_score is not None
+        assert hit.keyword_score is not None
+        assert 0.0 <= hit.semantic_score <= 1.0
+        assert 0.0 <= hit.keyword_score <= 1.0
+        # Both components contribute to fused score
+        assert hit.score >= 0.0
+
+    def test_hybrid_search_keyword_matches_ranked_higher(self, txtai_client):
+        """When query terms appear directly in docs, keyword score boosts them."""
+        txtai_client.index([
+            {
+                "id": "kw1",
+                "text": "function rate_limit throttling API calls",
+                "repo": "proj/a",
+                "language": "python",
+                "kind": "function",
+                "name": "rate_limit",
+                "signature": "()",
+                "file": "a.py",
+                "line": 1,
+                "docstring": "",
+                "decorators": [],
+                "body": "",
+            },
+            {
+                "id": "kw2",
+                "text": "function handle_request web request handler",
+                "repo": "proj/a",
+                "language": "python",
+                "kind": "function",
+                "name": "handle_request",
+                "signature": "()",
+                "file": "b.py",
+                "line": 1,
+                "docstring": "",
+                "decorators": [],
+                "body": "",
+            },
+        ])
+
+        search = BlueprintSearch(txtai_client)
+        # Query has "rate limit" — first doc has both words, second doesn't
+        results = search.hybrid_search("rate limit", limit=10)
+
+        assert len(results) >= 1
+        # rate_limit should be ranked first due to keyword match
+        assert results.hits[0].name == "rate_limit"
+
+    def test_hybrid_search_fused_score_higher_than_semantic_only(self, txtai_client):
+        """Hybrid fusion should boost results that match both semantic and keyword."""
+        txtai_client.index([
+            {
+                "id": "fuse1",
+                "text": "function authenticate verify user credentials login",
+                "repo": "proj/a",
+                "language": "python",
+                "kind": "function",
+                "name": "authenticate",
+                "signature": "()",
+                "file": "a.py",
+                "line": 1,
+                "docstring": "",
+                "decorators": [],
+                "body": "",
+            },
+            {
+                "id": "fuse2",
+                "text": "function helper general utility",
+                "repo": "proj/a",
+                "language": "python",
+                "kind": "function",
+                "name": "helper",
+                "signature": "()",
+                "file": "b.py",
+                "line": 1,
+                "docstring": "",
+                "decorators": [],
+                "body": "",
+            },
+        ])
+
+        search = BlueprintSearch(txtai_client)
+        hybrid_results = search.hybrid_search("authenticate", limit=10)
+        semantic_only = search.search("authenticate", limit=10)
+
+        # Both should rank authenticate first
+        assert hybrid_results.hits[0].name == "authenticate"
+        assert semantic_only.hits[0].name == "authenticate"
+        # But hybrid should carry the keyword score
+        assert hybrid_results.hits[0].keyword_score is not None
+        assert semantic_only.hits[0].keyword_score is None
+
+    def test_hybrid_search_is_hybrid_flag(self, txtai_client):
+        """SearchResults.is_hybrid should be True after hybrid_search."""
+        txtai_client.index([
+            {
+                "id": "flag1",
+                "text": "function test",
+                "repo": "x/y",
+                "language": "python",
+                "kind": "function",
+                "name": "test_fn",
+                "signature": "()",
+                "file": "a.py",
+                "line": 1,
+                "docstring": "",
+                "decorators": [],
+                "body": "",
+            },
+        ])
+        search = BlueprintSearch(txtai_client)
+        hybrid = search.hybrid_search("test", limit=5)
+        plain = search.search("test", limit=5)
+        assert hybrid.is_hybrid is True
+        assert plain.is_hybrid is False
+
+    def test_hybrid_search_empty_index(self, txtai_client):
+        """Empty index should return empty results without error."""
+        search = BlueprintSearch(txtai_client)
+        results = search.hybrid_search("anything", limit=10)
+        assert len(results) == 0
+
+    def test_hybrid_search_with_repo_filter(self, txtai_client):
+        """Hybrid search should work correctly after repo filtering."""
+        txtai_client.index([
+            {
+                "id": "repo1",
+                "text": "function hello world greeting",
+                "repo": "foo/bar",
+                "language": "python",
+                "kind": "function",
+                "name": "hello",
+                "signature": "()",
+                "file": "a.py",
+                "line": 1,
+                "docstring": "",
+                "decorators": [],
+                "body": "",
+            },
+            {
+                "id": "repo2",
+                "text": "function hello mars",
+                "repo": "baz/qux",
+                "language": "go",
+                "kind": "function",
+                "name": "hello",
+                "signature": "()",
+                "file": "b.go",
+                "line": 1,
+                "docstring": "",
+                "decorators": [],
+                "body": "",
+            },
+        ])
+        search = BlueprintSearch(txtai_client)
+        results = search.hybrid_search("hello", limit=10).by_repo("foo/bar")
+        assert all(h.repo == "foo/bar" for h in results.hits)
+
+    def test_search_hybrid_flag_shortcut(self, txtai_client):
+        """search(query, hybrid=True) should behave like hybrid_search()."""
+        txtai_client.index([
+            {
+                "id": "short1",
+                "text": "function check token validation",
+                "repo": "x/y",
+                "language": "python",
+                "kind": "function",
+                "name": "check_token",
+                "signature": "()",
+                "file": "a.py",
+                "line": 1,
+                "docstring": "",
+                "decorators": [],
+                "body": "",
+            },
+            {
+                "id": "short2",
+                "text": "function send message",
+                "repo": "x/y",
+                "language": "python",
+                "kind": "function",
+                "name": "send_message",
+                "signature": "()",
+                "file": "b.py",
+                "line": 1,
+                "docstring": "",
+                "decorators": [],
+                "body": "",
+            },
+        ])
+        search = BlueprintSearch(txtai_client)
+        via_flag = search.search("check token", limit=10, hybrid=True)
+        direct = search.hybrid_search("check token", limit=10)
+        assert via_flag.is_hybrid is True
+        assert direct.is_hybrid is True
+        assert len(via_flag.hits) >= 1
+        assert via_flag.hits[0].name == "check_token"
+
 # NotebookStore tests
 # ---------------------------------------------------------------------------
 

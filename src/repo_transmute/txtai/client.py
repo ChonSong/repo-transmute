@@ -6,6 +6,8 @@ SQLite sidecar that is written alongside the faiss index.
 """
 
 import json
+import math
+import re
 import sqlite3
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
@@ -127,6 +129,85 @@ class TxtaiClient:
         ).fetchall()
         conn.close()
         return {uid: json.loads(data) for uid, data in rows}
+
+    def _fetch_all_texts(self) -> Dict[str, str]:
+        """Fetch uid->text for all indexed documents (used for keyword search)."""
+        # Ensure DB is initialized before querying (handles empty index case)
+        self._init_meta_db()
+        conn = sqlite3.connect(self._meta_path)
+        rows = conn.execute("SELECT uid, data FROM meta").fetchall()
+        conn.close()
+        result: Dict[str, str] = {}
+        for uid, data in rows:
+            d = json.loads(data)
+            result[uid] = d.get("text", "")
+        return result
+
+    # ------------------------------------------------------------------
+    # BM25 keyword scoring (SQLite-based)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _tokenize(text: str) -> List[str]:
+        """Split text into lowercase alphanumeric tokens."""
+        return re.findall(r"[a-z0-9]+", text.lower())
+
+    def _bm25_score(
+        self,
+        texts: Dict[str, str],
+        query: str,
+        k1: float = 1.5,
+        b: float = 0.75,
+    ) -> Dict[str, float]:
+        """Compute simplified BM25 scores for all documents.
+
+        Args:
+            texts: Mapping of uid -> document text.
+            query: Raw query string (tokenized automatically).
+            k1: BM25 term frequency saturation parameter.
+            b: BM25 document length normalization parameter.
+
+        Returns:
+            Mapping of uid -> BM25 score (higher = more keyword-relevant).
+        """
+        query_tokens = self._tokenize(query)
+        if not query_tokens:
+            return {uid: 0.0 for uid in texts}
+
+        N = len(texts)
+        avgdl = sum(len(t) for t in texts.values()) / N if N else 1
+
+        # Per-document term frequencies
+        doc_tfs: Dict[str, Dict[str, int]] = {}
+        for uid, text in texts.items():
+            tokens = self._tokenize(text)
+            tf: Dict[str, int] = {}
+            for tok in tokens:
+                tf[tok] = tf.get(tok, 0) + 1
+            doc_tfs[uid] = tf
+
+        # Document frequency per token
+        doc_freqs: Dict[str, int] = {}
+        for uid, tf in doc_tfs.items():
+            for tok in tf:
+                doc_freqs[tok] = doc_freqs.get(tok, 0) + 1
+
+        scores: Dict[str, float] = {}
+        for uid, tf in doc_tfs.items():
+            score = 0.0
+            dl = len(self._tokenize(texts[uid]))
+            for tok in query_tokens:
+                df = doc_freqs.get(tok, 0)
+                if df == 0:
+                    continue
+                tf_val = tf.get(tok, 0)
+                idf = math.log((N - df + 0.5) / (df + 0.5) + 1)
+                numerator = tf_val * (k1 + 1)
+                denominator = tf_val + k1 * (1 - b + b * (dl / avgdl))
+                score += idf * (numerator / denominator) if denominator else 0.0
+            scores[uid] = score
+
+        return scores
 
     # ------------------------------------------------------------------
     # Repo-level metadata (last_indexed timestamps for deduplication)
@@ -334,6 +415,90 @@ class TxtaiClient:
                 "score": float(score),
             }
             result.update(meta_map.get(str(uid), {}))
+            results.append(result)
+
+        return results
+
+    def hybrid_search(
+        self,
+        query: str,
+        *,
+        limit: int = 10,
+        semantic_weight: float = 0.7,
+        keyword_weight: float = 0.3,
+        semantic_limit: int = 100,
+    ) -> List[Dict[str, Any]]:
+        """Hybrid keyword + semantic search over indexed blueprints.
+
+        Combines BM25 keyword scoring (from stored document text in SQLite)
+        with semantic vector similarity (from txtai). Both scores are
+        min-max normalised to [0, 1] before fusion.
+
+        Args:
+            query: Natural-language query string.
+            limit: Maximum results to return.
+            semantic_weight: Weight for the semantic score component (0.0–1.0).
+            keyword_weight: Weight for the keyword (BM25) score component (0.0–1.0).
+            semantic_limit: Number of semantic results to fetch before merging
+                            (higher = more recall for keyword terms not in vectors).
+
+        Returns:
+            List of dicts: ``[{uid, score, semantic_score, keyword_score, ...stored_metadata}]``
+        """
+        # 1. Semantic search — get more candidates than final limit for better recall
+        raw: List[tuple] = self.embeddings.search(query, limit=semantic_limit)
+        semantic_candidates: Dict[str, float] = {
+            str(uid): float(score) for uid, score in raw
+        }
+
+        # Include all candidate UIDs
+        all_uids = list(semantic_candidates.keys())
+
+        # 2. Keyword scores over the same candidate set (from SQLite sidecar)
+        all_texts = self._fetch_all_texts()
+        keyword_scores = self._bm25_score(all_texts, query)
+
+        # Normalise semantic scores
+        sem_vals = list(semantic_candidates.values())
+        sem_min, sem_max = min(sem_vals) if sem_vals else 0, max(sem_vals) if sem_vals else 1
+        sem_range = sem_max - sem_min if sem_max != sem_min else 1
+
+        # Normalise keyword scores
+        kw_vals = list(keyword_scores.values())
+        kw_min, kw_max = min(kw_vals) if kw_vals else 0, max(kw_vals) if kw_vals else 1
+        kw_range = kw_max - kw_min if kw_max != kw_min else 1
+
+        w_sum = semantic_weight + keyword_weight
+        sw = semantic_weight / w_sum
+        kw = keyword_weight / w_sum
+
+        # 3. Merge scores for all candidates
+        merged: List[Dict[str, Any]] = []
+        for uid in all_uids:
+            sem_raw = semantic_candidates[uid]
+            sem_norm = (sem_raw - sem_min) / sem_range if sem_range > 0 else 0.0
+            kw_raw = keyword_scores.get(uid, 0.0)
+            kw_norm = (kw_raw - kw_min) / kw_range if kw_range > 0 else 0.0
+
+            fused = sw * sem_norm + kw * kw_norm
+
+            merged.append({
+                "id": uid,
+                "score": fused,
+                "semantic_score": round(sem_norm, 4),
+                "keyword_score": round(kw_norm, 4),
+            })
+
+        # 4. Sort by fused score descending, trim to limit
+        merged.sort(key=lambda x: x["score"], reverse=True)
+        merged = merged[:limit]
+
+        # 5. Enrich with metadata
+        meta_map = self._fetch_meta([m["id"] for m in merged])
+        results = []
+        for m in merged:
+            result: Dict[str, Any] = dict(m)
+            result.update(meta_map.get(m["id"], {}))
             results.append(result)
 
         return results

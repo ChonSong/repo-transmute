@@ -1,7 +1,7 @@
 """Semantic search interface for indexed RepoTransmute blueprints.
 
 Provides a high-level search API on top of the txtai index, including
-cross-repo pattern discovery.
+cross-repo pattern discovery and hybrid keyword+semantic search.
 """
 
 from dataclasses import dataclass, field
@@ -33,6 +33,8 @@ class SearchHit:
                  extracted for relevance. Best-effort: falls back to
                  docstring or signature if body is not available.
         score: Relevance score from txtai (0.0–1.0, higher = more relevant).
+        semantic_score: Normalised semantic similarity component (0.0–1.0, None if not hybrid).
+        keyword_score: Normalised BM25 keyword component (0.0–1.0, None if not hybrid).
     """
     uid: str
     repo: str
@@ -45,6 +47,8 @@ class SearchHit:
     docstring: str
     score: float
     snippet: str = ""
+    semantic_score: Optional[float] = None
+    keyword_score: Optional[float] = None
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> "SearchHit":
@@ -65,6 +69,8 @@ class SearchHit:
             docstring=d.get("docstring", ""),
             score=float(d.get("score", 0.0)),
             snippet=snippet,
+            semantic_score=d.get("semantic_score"),
+            keyword_score=d.get("keyword_score"),
         )
 
     @staticmethod
@@ -104,7 +110,7 @@ class SearchHit:
 
     def as_dict(self) -> Dict[str, Any]:
         """Serialize this hit to a plain dict (JSON-safe)."""
-        return {
+        d = {
             "uid": self.uid,
             "repo": self.repo,
             "language": self.language,
@@ -117,6 +123,11 @@ class SearchHit:
             "snippet": self.snippet,
             "score": round(self.score, 4),
         }
+        if self.semantic_score is not None:
+            d["semantic_score"] = round(self.semantic_score, 4)
+        if self.keyword_score is not None:
+            d["keyword_score"] = round(self.keyword_score, 4)
+        return d
 
     @property
     def location(self) -> str:
@@ -140,6 +151,7 @@ class SearchResults:
     query: str
     hits: List[SearchHit]
     total_indexed: int
+    is_hybrid: bool = False  # True when hybrid_search was used
 
     def __len__(self) -> int:
         return len(self.hits)
@@ -150,6 +162,7 @@ class SearchResults:
             query=self.query,
             hits=[h for h in self.hits if h.repo == repo],
             total_indexed=self.total_indexed,
+            is_hybrid=self.is_hybrid,
         )
 
     def by_kind(self, kind: str) -> "SearchResults":
@@ -158,6 +171,7 @@ class SearchResults:
             query=self.query,
             hits=[h for h in self.hits if h.kind == kind],
             total_indexed=self.total_indexed,
+            is_hybrid=self.is_hybrid,
         )
 
     def by_language(self, language: str) -> "SearchResults":
@@ -166,6 +180,7 @@ class SearchResults:
             query=self.query,
             hits=[h for h in self.hits if h.language == language],
             total_indexed=self.total_indexed,
+            is_hybrid=self.is_hybrid,
         )
 
     def functions_only(self) -> "SearchResults":
@@ -210,6 +225,11 @@ class BlueprintSearch:
         # Filter to functions in Python repos only
         py_funcs = results.functions_only().by_language("python")
 
+        # Hybrid keyword + semantic search
+        hybrid_results = search.hybrid_search("rate limit", limit=10)
+        for hit in hybrid_results.hits:
+            print(f"{hit.name} (sem={hit.semantic_score:.2f}, kw={hit.keyword_score:.2f})")
+
         # Cross-repo: find all repos that have a similar pattern
         auth_repos = {h.repo for h in results.hits}
         print(f"Repos with auth patterns: {auth_repos}")
@@ -230,23 +250,68 @@ class BlueprintSearch:
         query: str,
         *,
         limit: int = 10,
+        hybrid: bool = False,
     ) -> SearchResults:
-        """Run a semantic search over indexed blueprints.
+        """Run a semantic or hybrid search over indexed blueprints.
 
         Args:
             query: Natural-language query.
             limit: Maximum hits to return (default 10).
+            hybrid: If True, combine semantic + keyword (BM25) scoring.
+                    Uses 70% semantic / 30% keyword by default.
 
         Returns:
             SearchResults with a list of SearchHit objects, sorted by
             descending relevance score.
         """
-        raw = self.client.search(query, limit=limit)
+        if hybrid:
+            raw = self.client.hybrid_search(query, limit=limit)
+            hits = [SearchHit.from_dict(r) for r in raw]
+        else:
+            raw = self.client.search(query, limit=limit)
+            hits = [SearchHit.from_dict(r) for r in raw]
+        return SearchResults(
+            query=query,
+            hits=hits,
+            total_indexed=self.client.count(),
+            is_hybrid=hybrid,
+        )
+
+    def hybrid_search(
+        self,
+        query: str,
+        *,
+        limit: int = 10,
+        semantic_weight: float = 0.7,
+        keyword_weight: float = 0.3,
+    ) -> SearchResults:
+        """Hybrid keyword + semantic search.
+
+        Short-hand for ``search(query, hybrid=True)`` with explicit weight
+        control.
+
+        Args:
+            query: Natural-language query.
+            limit: Maximum hits to return.
+            semantic_weight: Weight for the semantic score component.
+            keyword_weight: Weight for the keyword (BM25) score component.
+
+        Returns:
+            SearchResults where each hit carries ``semantic_score`` and
+            ``keyword_score`` attributes alongside the fused ``score``.
+        """
+        raw = self.client.hybrid_search(
+            query,
+            limit=limit,
+            semantic_weight=semantic_weight,
+            keyword_weight=keyword_weight,
+        )
         hits = [SearchHit.from_dict(r) for r in raw]
         return SearchResults(
             query=query,
             hits=hits,
             total_indexed=self.client.count(),
+            is_hybrid=True,
         )
 
     def search_by_repo(
@@ -303,12 +368,25 @@ class BlueprintSearch:
           "How do different repos handle rate limiting?"
           "What caching strategies are used across our indexed code?"
         """
+        # Perform semantic search to get pattern-matched results, then
+        # collect all UIDs so we can retrieve full metadata and deduplicate.
         all_results = self.client.search(pattern, limit=limit_per_repo * 10)
+        all_uids = [r["id"] for r in all_results]
+
+        # Batch-fetch metadata for all returned UIDs
+        meta_map = self.client._fetch_meta(all_uids)
+
+        # Build SearchHits from semantic results (with scores) enriched with metadata
         by_repo: Dict[str, List[SearchHit]] = {}
         for r in all_results:
-            hit = SearchHit.from_dict(r)
+            uid = r["id"]
+            meta = meta_map.get(uid, {})
+            # Merge raw result (with score) and metadata (with repo, name, etc.)
+            merged = {**meta, "id": uid, "score": r["score"]}
+            hit = SearchHit.from_dict(merged)
             by_repo.setdefault(hit.repo, []).append(hit)
-        # Sort each repo's hits by score descending, then trim
+
+        # Sort each repo's hits by score descending, then trim to limit_per_repo
         return {
             repo: sorted(hits, key=lambda h: h.score, reverse=True)[:limit_per_repo]
             for repo, hits in by_repo.items()
@@ -330,25 +408,34 @@ class BlueprintSearch:
         count = self.client.count()
         if count == 0:
             return []
-        raw = self.client.search("*", limit=min(count, 1000))
-        return sorted({r.get("repo", "") for r in raw if r.get("repo")})
+        all_uids = self.client.embeddings.ids.ids
+        if not all_uids:
+            return []
+        meta_map = self.client._fetch_meta(all_uids)
+        return sorted({meta.get("repo", "") for meta in meta_map.values() if meta.get("repo")})
 
     def languages(self) -> List[str]:
         """List all source languages currently indexed."""
         count = self.client.count()
         if count == 0:
             return []
-        raw = self.client.search("*", limit=min(count, 1000))
-        return sorted({r.get("language", "") for r in raw if r.get("language")})
+        all_uids = self.client.embeddings.ids.ids
+        if not all_uids:
+            return []
+        meta_map = self.client._fetch_meta(all_uids)
+        return sorted({meta.get("language", "") for meta in meta_map.values() if meta.get("language")})
 
     def stats(self) -> Dict[str, int]:
         """Return summary statistics for the current index."""
         count = self.client.count()
         if count == 0:
             return {"total": 0, "repos": 0, "languages": 0}
-        raw = self.client.search("*", limit=min(count, 1000))
-        repos = {r.get("repo", "") for r in raw if r.get("repo")}
-        langs = {r.get("language", "") for r in raw if r.get("language")}
+        all_uids = self.client.embeddings.ids.ids
+        if not all_uids:
+            return {"total": 0, "repos": 0, "languages": 0}
+        meta_map = self.client._fetch_meta(all_uids)
+        repos = {meta.get("repo", "") for meta in meta_map.values() if meta.get("repo")}
+        langs = {meta.get("language", "") for meta in meta_map.values() if meta.get("language")}
         return {
             "total": count,
             "repos": len(repos),
