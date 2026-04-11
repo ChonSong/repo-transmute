@@ -289,6 +289,91 @@ class TestReassemblerEndToEnd:
             ts_files = list(output_dir.glob("*.ts"))
             assert len(ts_files) >= 2, f"Expected ≥2 .ts files, got {len(ts_files)}"
 
+    def test_write_files_preserves_subdirectory_structure(self, twint_repo, tmp_path):
+        """write_files creates subdirectories matching the original repo layout.
+
+        This is the e2e validation for the April 10 Reassembler fix:
+        combine() and _split_into_file_units() correctly handle subdirectory
+        paths in // filename: markers emitted by the transpiler.
+
+        The twint repo has files in subdirectories like twint/ and twint/storage/.
+        When the transpiler emits // filename: twint/storage/db.ts markers,
+        write_files must create those subdirectories in the output.
+        """
+        import yaml
+        from pathlib import Path as P
+
+        coord = PipelineCoordinator(target_lang="typescript", max_passes=1, max_functions_per_chunk=5)
+
+        def subdirectory_aware_transpile(blueprint_path, target, output_dir=None):
+            """Mock that reads blueprint file paths and emits // filename: markers.
+
+            The blueprint stores absolute paths (e.g. /repo/cache/twintproject__twint/twint/cli.py).
+            The _split_into_file_units fix handles stripping the base_path prefix
+            from absolute paths, so we return absolute paths here (matching real LLM behaviour
+            when _build_per_file_units is bypassed or returns absolute markers).
+            """
+            import yaml
+            from pathlib import Path as P
+
+            with open(blueprint_path) as f:
+                bp = yaml.safe_load(f)
+
+            # Group symbols by source file (using absolute paths as-is from blueprint)
+            files_to_symbols: dict = {}
+            for func in bp.get("blueprint", {}).get("functions", []):
+                filepath = func.get("file", "unknown")
+                if filepath not in files_to_symbols:
+                    files_to_symbols[filepath] = []
+                files_to_symbols[filepath].append(f"export function {func['name']}(): void {{}}")
+
+            for ds in bp.get("blueprint", {}).get("data_structures", []):
+                filepath = ds.get("file", "unknown")
+                if filepath not in files_to_symbols:
+                    files_to_symbols[filepath] = []
+                files_to_symbols[filepath].append(f"export class {ds['name']} {{}}")
+
+            # Build transpiled output with // filename: markers for each source file
+            # (absolute paths — _split_into_file_units now handles stripping base_path)
+            units = []
+            for filepath, symbols in files_to_symbols.items():
+                ts_path = str(P(filepath).with_suffix(".ts"))
+                units.append(
+                    f"// filename: {ts_path}\n" + "\n".join(symbols)
+                )
+
+            return "\n\n---FILE_SEPARATOR---\n\n".join(units)
+
+        coord.transpiler.transpile = subdirectory_aware_transpile
+
+        output_dir = tmp_path / "out"
+        combined, processed, total, written, failed = coord.transpile_all_chunks(
+            repo_path=twint_repo,
+            language="python",
+            output_dir=output_dir,
+        )
+
+        # Verify: at least some output files must be in subdirectories
+        all_files = list(output_dir.rglob("*.ts"))
+        subdir_files = [f for f in all_files if len(f.relative_to(output_dir).parts) > 1]
+
+        assert len(all_files) > 0, (
+            "write_files must produce at least one .ts file"
+        )
+        assert len(subdir_files) > 0, (
+            f"Expected some output files in subdirectories (like twint/ or twint/storage/), "
+            f"but all {len(all_files)} files were at root level: "
+            f"{[str(f.relative_to(output_dir)) for f in all_files]}"
+        )
+
+        # Verify specific expected subdirectory patterns from twint repo
+        rel_paths = {str(f.relative_to(output_dir)) for f in all_files}
+        has_twint_subdir = any(p.startswith("twint" + "/") for p in rel_paths)
+        assert has_twint_subdir, (
+            f"Expected files under twint/ subdirectory, got: {sorted(rel_paths)}"
+        )
+
+
 
 # ---------------------------------------------------------------------------
 # Tests: IntegrationValidator

@@ -392,6 +392,16 @@ class Reassembler:
                 m = re.match(r"^// ?filename: ?([^\n]*)\n?", piece)
                 if m:
                     filename = m.group(1).strip()
+                    # If filename is an absolute path, try to make it relative to base_path
+                    # This handles cases where the transpiler (LLM) returned absolute paths
+                    # in the // filename: markers (the _build_per_file_units normalization
+                    # in combine() should prevent this, but we handle it defensively)
+                    if filename.startswith("/") and self.base_path:
+                        try:
+                            filename = str(Path(filename).relative_to(self.base_path))
+                        except ValueError:
+                            # Not relative to base_path — strip leading slashes and use as-is
+                            filename = filename.lstrip("/")
                     code = piece[m.end():].lstrip()
                     file_units.append((filename, code))
                 else:
