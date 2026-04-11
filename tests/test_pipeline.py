@@ -931,7 +931,7 @@ class TestTranspileCommandChunkMode:
         def fake_transpile_chunk(chunk, repo_path, language, output_dir=None):
             captured["chunk_id"] = chunk.id
             captured["num_files"] = len(chunk.files)
-            return "// transpiled"
+            return "// transpiled", ValidationResult(success=True)
 
         coord = PipelineCoordinator(target_lang="typescript", max_passes=1)
         with patch.object(coord, "transpile_chunk", fake_transpile_chunk), \
@@ -962,7 +962,7 @@ class TestTranspileCommandChunkMode:
 
         runner = CliRunner()
         with patch("repo_transmute.cli.PipelineCoordinator") as MockCoord:
-            MockCoord.return_value.transpile_chunk = lambda *a, **kw: "// out"
+            MockCoord.return_value.transpile_chunk = lambda *a, **kw: ("// out", ValidationResult(success=True))
             result = runner.invoke(transpile, [
                 "--repo", "owner/repo", "--chunk-id", "0",
                 "--cache-dir", str(cache),
@@ -973,7 +973,7 @@ class TestTranspileCommandChunkMode:
 
         # Out of range
         with patch("repo_transmute.cli.PipelineCoordinator") as MockCoord:
-            MockCoord.return_value.transpile_chunk = lambda *a, **kw: "// out"
+            MockCoord.return_value.transpile_chunk = lambda *a, **kw: ("// out", ValidationResult(success=True))
             result = runner.invoke(transpile, [
                 "--repo", "owner/repo", "--chunk-id", "99",
                 "--cache-dir", str(cache),
@@ -996,7 +996,7 @@ class TestTranspileCommandChunkMode:
         out_dir = tmp_path / "out"
 
         coord = PipelineCoordinator(target_lang="typescript", max_passes=1)
-        coord.transpile_chunk = lambda *a, **kw: "// filename: test.ts\nexport function f(): void { }"
+        coord.transpile_chunk = lambda *a, **kw: ("// filename: test.ts\nexport function f(): void { }", ValidationResult(success=True))
         with patch("repo_transmute.cli.PipelineCoordinator", return_value=coord):
             _transpile_single_chunk(
                 repo="owner/repo",

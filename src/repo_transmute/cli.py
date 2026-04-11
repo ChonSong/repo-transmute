@@ -526,7 +526,7 @@ def _transpile_single_chunk(
 
     click.echo(f"\nTranspiling (target={target})...")
     try:
-        result = coordinator.transpile_chunk(
+        code, vr = coordinator.transpile_chunk(
             chunk=chunk,
             repo_path=repo_path,
             language=language,
@@ -536,14 +536,20 @@ def _transpile_single_chunk(
         raise click.ClickException(f"Transpile failed: {e}")
 
     click.echo("\n--- Transpiled Code ---")
-    click.echo(result)
+    click.echo(code)
     click.echo("--- End ---\n")
+
+    # Show validation result
+    if vr and not vr.success:
+        click.echo(click.style(f"⚠ Validation: {vr.error or 'failed'}", fg="yellow"))
+    else:
+        click.echo(click.style("✓ Validation passed", fg="green"))
 
     if output_dir:
         output_dir.mkdir(parents=True, exist_ok=True)
         suffix = _target_ext(target)
         out_file = output_dir / f"chunk{chunk_id:03d}.{suffix}"
-        out_file.write_text(result)
+        out_file.write_text(code)
         click.echo(click.style(f"Saved → {out_file}", fg="green"))
 
 
