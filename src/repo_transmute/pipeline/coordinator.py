@@ -406,55 +406,61 @@ def _generate_rust_tests(chunk_files: List[Path]) -> str:
     return "\n".join(test_lines)
 
 
+
 def _generate_go_tests(chunk_files: List[Path]) -> str:
-    """Generate Go tests using go test naming conventions."""
-    test_lines = [
-        "// Auto-generated tests",
-        "package main",
-        "",
-        'import "testing"',
-        "",
-    ]
+    """Generate Go tests using AST-aware test generation from go_test_gen.
 
-    modules: dict[str, List[Path]] = {}
+    Falls back to basic regex-based generation if go_test_gen encounters
+    an error (e.g. malformed Go source).
+    """
+    from repo_transmute.transpiler.go_test_gen import generate_test_file
+
+    all_stubs: list[str] = []
+    processed_funcs: set[str] = set()
+
     for f in chunk_files:
-        module_name = f.stem
-        if module_name not in modules:
-            modules[module_name] = []
-        modules[module_name].append(f)
+        if not f.exists() or f.suffix != ".go":
+            continue
+        try:
+            test_content = generate_test_file(f)
+            if test_content and test_content.strip():
+                all_stubs.append(test_content)
+                # Track which functions were covered
+                for line in test_content.splitlines():
+                    m = re.match(r"^func (Test\w+)\(", line)
+                    if m:
+                        processed_funcs.add(m.group(1))
+        except Exception:
+            # Fall back to basic regex for this file
+            try:
+                content = f.read_text()
+                func_pattern = r"^func ([A-Z]\w*) \("
+                for func_name in re.findall(func_pattern, content, re.MULTILINE):
+                    test_name = f"Test{func_name}"
+                    if test_name not in processed_funcs:
+                        all_stubs.append(
+                            f"func {test_name}(t *testing.T) {{\n"
+                            f"    // TODO: Test {func_name}\n"
+                            f'    t.Logf("%s not yet tested", "{func_name}")\n'
+                            f"}}\n"
+                        )
+                        processed_funcs.add(test_name)
+            except Exception:
+                continue
 
-    for module_name, files in modules.items():
-        for file in files:
-            content = file.read_text()
+    if all_stubs:
+        return "\n\n".join(all_stubs)
 
-            # Find exported functions (capitalized)
-            func_pattern = r"^func ([A-Z]\w*) \("
-            matches = re.findall(func_pattern, content, re.MULTILINE)
-
-            for func_name in matches:
-                test_lines.append(f"func Test{func_name}(t *testing.T) {{")
-                test_lines.append(f"    // TODO: Test {func_name}")
-                test_lines.append(f"    t.Logf(\"%s not yet tested\", func_name)")
-                test_lines.append("}")
-                test_lines.append("")
-
-            # Find exported types
-            type_pattern = r"^type ([A-Z]\w*) struct"
-            type_matches = re.findall(type_pattern, content, re.MULTILINE)
-            for type_name in type_matches:
-                test_lines.append(f"func TestNew{type_name}(t *testing.T) {{")
-                test_lines.append(f"    // TODO: Test {type_name} constructor")
-                test_lines.append(f"    t.Logf(\"New%s not yet tested\", type_name)")
-                test_lines.append("}")
-                test_lines.append("")
-
-    test_lines.append("func TestIntegration(t *testing.T) {")
-    test_lines.append("    // TODO: Add integration test")
-    test_lines.append("    t.Log(\"Integration test not yet implemented\")")
-    test_lines.append("}")
-    test_lines.append("")
-
-    return "\n".join(test_lines)
+    # No files or functions found — return minimal placeholder
+    return (
+        "// Auto-generated tests\n"
+        "package main\n\n"
+        'import "testing"\n\n'
+        "func TestIntegration(t *testing.T) {\n"
+        "    // TODO: Add integration test\n"
+        '    t.Log("Integration test not yet implemented")\n'
+        "}\n"
+    )
 
 
 class PipelineCoordinator:

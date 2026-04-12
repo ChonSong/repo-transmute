@@ -1317,3 +1317,61 @@ class TestCrossChunkContext:
                     f"Context at chunk {i} ({len(captured_contexts[i])}) should be >= "
                     f"context at chunk {i-1} ({len(captured_contexts[i-1])})"
                 )
+
+
+# ---------------------------------------------------------------------------
+# Tests: Go test generation integration
+# ---------------------------------------------------------------------------
+
+class TestGoTestGenIntegration:
+    """Go test generation uses AST-aware go_test_gen module."""
+
+    def test_generate_go_tests_uses_ast_parser(self, tmp_path):
+        """_generate_go_tests produces AST-aware test stubs from Go source."""
+        from repo_transmute.pipeline.coordinator import _generate_go_tests
+
+        go_file = tmp_path / "service.go"
+        go_file.write_text("""package main
+
+// Load reads config from a file.
+func Load(path string) (*Config, error) {
+    return nil, nil
+}
+""")
+
+        result = _generate_go_tests([go_file])
+        assert "TestLoad" in result
+        assert "testing" in result
+        # AST-aware output should include parameter setup
+        assert "path" in result.lower()
+
+    def test_generate_go_tests_handles_nonexistent_file(self, tmp_path):
+        """_generate_go_tests gracefully handles missing files."""
+        from repo_transmute.pipeline.coordinator import _generate_go_tests
+
+        nonexistent = tmp_path / "absent.go"
+        result = _generate_go_tests([nonexistent])
+        # Should return minimal placeholder
+        assert "testing" in result
+
+    def test_generate_go_tests_handles_empty_file(self, tmp_path):
+        """_generate_go_tests handles empty Go files."""
+        from repo_transmute.pipeline.coordinator import _generate_go_tests
+
+        go_file = tmp_path / "empty.go"
+        go_file.write_text("package main\n")
+
+        result = _generate_go_tests([go_file])
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    def test_generate_go_tests_multiple_files(self, tmp_path):
+        """_generate_go_tests processes multiple Go files."""
+        from repo_transmute.pipeline.coordinator import _generate_go_tests
+
+        (tmp_path / "a.go").write_text("package main\n\nfunc Alpha() int { return 1 }\n")
+        (tmp_path / "b.go").write_text("package main\n\nfunc Beta() string { return \"hi\" }\n")
+
+        result = _generate_go_tests([tmp_path / "a.go", tmp_path / "b.go"])
+        assert "TestAlpha" in result
+        assert "TestBeta" in result
