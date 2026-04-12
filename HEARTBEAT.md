@@ -3,7 +3,7 @@
 ## System Status
 
 - **TXTAI Index**: ✅ Built (12,181 docs, 11 repos)
-- **Pipeline**: ✅ Working (543 tests pass)
+- **Pipeline**: ✅ Working (558 tests pass)
 - **Nightly cron**: ✅ Active (runs ~6:30 UTC each night)
 
 ## No active priorities — awaiting Sean direction
@@ -11,6 +11,10 @@
 The system is in good working order. All phases are complete.
 
 ## Recent Work
+
+- **2026-04-12 Night Owl**: Implemented cross-chunk context — LLM now sees exports from prior chunks when transpiling (commit `78df5b7`). When transpiling chunk N, the pipeline accumulates exports from chunks 0..N-1 and embeds them in the prompt, enabling correct import generation and preventing duplicate definitions. 11 new tests.
+
+- **2026-04-12 Night Owl**: Integrated `go_test_gen.py` AST-aware test generation into pipeline coordinator (commit `beb8c54`). Replaced basic regex-based Go test generation with proper AST parsing. Falls back to regex on parse errors. 4 new tests.
 
 - **2026-04-11 Night Owl**: Fixed cross-chunk dependency detection in `create_chunks()` (commit `f64aa89`). Imports were stored as qualified dotted paths (`pkg.mod.Symbol`) while exports are bare names (`Symbol`), so the direct membership check never matched. Added `_symbol_from_qualified_import()` helper that strips the leading prefix and filters stdlib imports. 543 tests pass (up from 541).
 
@@ -45,38 +49,31 @@ High-level API (`BlueprintSearch`):
 
 ## Phase 7 — ClawFlow Orchestration (DONE 2026-04-11)
 
-Lobster workflow at `scripts/flows/repo_transmute_heartbeat.lobster`:
+Lobster workflow at `scripts/flows/repo_transmute_heartbeat.lobster`.
 
-```
-detect_stale (git remote HEAD vs local HEAD for each cached repo)
-  → reingest_stale (repo-transmute ingest for stale repos)
-    → run_index (TXTAI indexer, incremental)
-      → transpile_sample (transpile chunk 0 to validate pipeline)
-        → observability_report (post summary to Discord #night-owl-reports)
-```
+## Cross-Chunk Context Feature (2026-04-12)
 
-Supporting scripts in `scripts/`:
-- `check_repos_stale.py` — detect stale cached repos
-- `reingest_stale_repos.py` — re-ingest stale repos
-- `run_index.py` — run TXTAI indexer
-- `transpile_sample.py` — validate pipeline via sample transpile
-- `post_observability.py` — Discord observability summary
+When transpiling chunk N, the LLM now receives context about symbols exported by previously-transpiled chunks (0..N-1). This includes:
+- Output file paths for each exported symbol
+- Function names and signatures
+- Data structure names, types, and fields
+- Language-specific import examples
 
-## Phase 6 — Runtime Validation
+The context is accumulated progressively: after each chunk is transpiled, `_build_chunk_export_info()` extracts its exports and appends them to the running list. Subsequent chunks receive the full accumulated context via `cross_chunk_exports` parameter in `transpile_chunk()`.
 
-- [x] TXTAI index rebuilt (done)
-- [x] Discord alert step in lobster workflow — alert_and_halt sends to `#evaluator-alerts` when critical drift or critical oracle failure detected (in agent-interaction-evaluator-repo)
-- [x] ClawFlow orchestration (Phase 7 — done 2026-04-11)
+Flow: `coordinator.transpile_all_chunks()` → accumulates `cross_chunk_exports_acc` → passes to `transpile_chunk()` → embeds in `blueprint_data["blueprint"]["cross_chunk_exports"]` → serialized to YAML → `Transpiler.transpile()` → `build_transpile_prompt(blueprint, ..., cross_chunk_exports=...)` → `format_cross_chunk_context()` → rendered as "# CROSS-CHUNK CONTEXT" section in prompt.
 
-## Cross-Chunk Dependency Detection Fix (Night Owl 2026-04-11)
+## Go Test Generation Integration (2026-04-12)
 
-**Bug**: `create_chunks()` stored imports as qualified dotted paths (`pkg.mod.Symbol`) but exports as bare names (`Symbol`). The direct membership check `export in chunk_imports` never matched cross-chunk dependencies, causing chunks to be transpiled in arbitrary order rather than dependency order.
+The `_generate_go_tests()` function now uses the AST-aware `go_test_gen` module instead of basic regex. Benefits:
+- Proper parameter extraction with type info
+- Return type awareness (error checks, value comparisons)
+- Fallback to regex for malformed Go source
+- Method test stubs via separate `generate_test_file_for_methods()`
 
-**Fix**: Added `_symbol_from_qualified_import()` in `chunker.py`:
-- Strips the leading qualified prefix from imports to recover the bare symbol name
-- Filters out stdlib imports (os.path.join, typing.Optional, etc.)
-- For each chunk, checks whether its imports resolve to exports of earlier chunks
+## Open Items
 
-**Tests added** (in `test_e2e_pipeline.py::TestCreateChunks`):
-- `test_cross_chunk_dep_with_qualified_imports`: verifies `from pkg0.api import helper` creates a dep on chunk0
-- `test_cross_chunk_dep_excludes_stdlib_imports`: verifies `from os.path import join` does NOT create a spurious dep
+1. **Runtime test execution**: `run_tests()` is implemented and has unit tests, but has not been verified end-to-end with a real transpiled project
+2. **Directory structure preservation**: Output directory structure in `write_files()` uses the `// filename:` marker paths; if LLM generates incorrect paths, structure could be wrong
+3. ~~**Cross-chunk context**: LLM gets no context about what other chunks exported when transpiling a chunk~~ → **DONE 2026-04-12**
+4. ~~**Go test generation**: `go_test_gen.py` exists but has not been integrated into the pipeline coordinator~~ → **DONE 2026-04-12**

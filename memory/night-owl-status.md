@@ -1,46 +1,54 @@
 # Night Owl Status — RepoTransmute
 
-**Last updated:** 2026-04-11T09:49 UTC
+**Last updated:** 2026-04-12T06:30 UTC
 
 ## Session Summary
 
-Night Owl session started 2026-04-11 09:49 UTC (~21:49 Sydney time). Worked 60 minutes on highest-priority component gap.
+Night Owl session started 2026-04-12 06:01 UTC (~16:01 Sydney time). Worked ~90 minutes on two component gaps.
 
 ## Work Done This Session
 
-### Fixed Cross-Chunk Dependency Detection Bug
+### 1. Cross-Chunk Context (commit `78df5b7`)
 
-**File**: `src/repo_transmute/transpiler/chunker.py`
-**Commit**: `f64aa89`
+**Problem**: When transpiling chunk N, the LLM had no knowledge of what other chunks exported. This led to:
+- Duplicate definitions (LLM re-implements symbols from other chunks)
+- Incorrect import paths (LLM guesses instead of using actual output file paths)
+- Missing cross-chunk references
 
-**Problem**: `create_chunks()` stored imports as qualified dotted paths (e.g. `mod0.helper.User`) while exports were bare symbol names (e.g. `User`). The cross-chunk dependency detection used `export in chunk_imports` which never matched when imports were qualified. This caused chunks to be transpiled in arbitrary order rather than dependency order.
+**Solution**: Progressive cross-chunk export accumulation:
+- `transpile_all_chunks()` maintains `cross_chunk_exports_acc` list
+- After each chunk is transpiled, `_build_chunk_export_info()` extracts its exports
+- Subsequent chunks receive the accumulated context via `cross_chunk_exports` parameter
+- Context includes: output file paths, export names, function signatures, data structure fields
+- `build_transpile_prompt()` renders context as "# CROSS-CHUNK CONTEXT" section
 
-**Fix**: Added `_symbol_from_qualified_import(imp)` helper:
-- Takes a qualified import path like `mod0.helper.User` and returns `User` (last dotted component)
-- Filters out stdlib imports (os, sys, re, json, typing, etc.) — these should not create internal chunk dependencies
-- Returns `None` for bare imports (no dots) since they can't be cross-chunk
-- The dependency detection loop now uses this helper to match qualified imports against bare exports
+**Files changed**:
+- `src/repo_transmute/transpiler/prompts.py` — Added `format_cross_chunk_context()`, updated `build_transpile_prompt()`
+- `src/repo_transmute/pipeline/coordinator.py` — Added `_build_chunk_export_info()`, updated `transpile_chunk()` and `transpile_all_chunks()`
+- `src/repo_transmute/transpiler/llm.py` — Pass `cross_chunk_exports` from blueprint dict to prompt builder
 
-**Tests added** (in `tests/test_e2e_pipeline.py::TestCreateChunks`):
-- `test_cross_chunk_dep_with_qualified_imports`: two packages, chunk1 imports `pkg0.api.helper` and `pkg0.api.other` → verifies chunk1 depends on chunk0
-- `test_cross_chunk_dep_excludes_stdlib_imports`: chunk1 imports `os.path.join` → verifies no spurious dependency
+**Tests added**: 11 (in `tests/test_e2e_pipeline.py::TestCrossChunkContext`)
 
-**Test results**: 543 passed (up from 541), 8 skipped.
+### 2. Go Test Generation Integration (commit `beb8c54`)
 
-## Open Items
+**Problem**: `go_test_gen.py` module existed but wasn't used in the pipeline. The coordinator's `_generate_go_tests()` used basic regex, producing low-quality test stubs.
 
-1. **Runtime test execution**: `run_tests()` is implemented and has unit tests, but has not been verified end-to-end with a real transpiled project
-2. **Directory structure preservation**: Output directory structure in `write_files()` uses the `// filename:` marker paths; if LLM generates incorrect paths, structure could be wrong
-3. **Cross-chunk context**: LLM gets no context about what other chunks exported when transpiling a chunk — could lead to incorrect import paths in transpiled code
-4. **Go test generation**: `go_test_gen.py` exists but has not been integrated into the pipeline coordinator
+**Solution**: Replaced `_generate_go_tests()` with AST-aware implementation that:
+- Uses `go_test_gen.generate_test_file()` for proper Go AST parsing
+- Generates richer stubs with parameter names and return types
+- Falls back to regex on parse errors
+- Handles missing/empty files gracefully
 
-## File Locations
+**Tests added**: 4 (in `tests/test_e2e_pipeline.py::TestGoTestGenIntegration`)
 
-| File | Purpose |
-|------|---------|
-| `src/repo_transmute/transpiler/chunker.py` | Chunking + reassembly (FIXED) |
-| `src/repo_transmute/transpiler/go_parser.py` | Go AST extraction |
-| `src/repo_transmute/pipeline/coordinator.py` | Pipeline coordinator |
-| `tests/test_e2e_pipeline.py` | E2E pipeline tests (2 new tests added) |
-| `tests/test_go_parser.py` | 57 Go parser tests |
-| `tests/test_validate.py` | 71 validation tests |
+## Test Results
+
+- **Before**: 543 passed, 8 skipped
+- **After**: 558 passed, 8 skipped (+15 new tests)
+
+## Remaining Open Items
+
+1. **Runtime test execution**: `run_tests()` implemented but not verified end-to-end
+2. **Directory structure preservation**: Potential issues with LLM-generated paths
+3. ~~Cross-chunk context~~ → **DONE**
+4. ~~Go test generation integration~~ → **DONE**
