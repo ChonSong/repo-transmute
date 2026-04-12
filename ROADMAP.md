@@ -123,7 +123,7 @@ AI-powered code transpilation engine that:
 
 | Task | Status | Notes |
 |------|--------|-------|
-| **Go support** | ⏳ | Add Go AST parser |
+| **Go support** | 🟡 Scaffolded (57 tests, goast binary) | Go AST parser via goast binary, regex fallback |
 | Java support | ⏳ | |
 | Ruby support | ⏳ | |
 | PHP support | ⏳ | |
@@ -166,6 +166,8 @@ AI-powered code transpilation engine that:
 ---
 
 ## Testing Results
+
+> Last updated: 2026-04-12
 
 | Repo | Source | Target | Functions | Output | Status |
 |------|--------|--------|-----------|--------|--------|
