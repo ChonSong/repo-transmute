@@ -82,7 +82,8 @@ class Transpiler:
             blueprint = yaml.safe_load(f)
 
         source_lang = blueprint.get("blueprint", {}).get("language", "python")
-        prompt = build_transpile_prompt(blueprint, source_lang, target_lang)
+        cross_chunk = blueprint.get("blueprint", {}).get("cross_chunk_exports")
+        prompt = build_transpile_prompt(blueprint, source_lang, target_lang, cross_chunk_exports=cross_chunk)
 
         if "MiniMax" in self.model:
             result = self._call_minimax(prompt)

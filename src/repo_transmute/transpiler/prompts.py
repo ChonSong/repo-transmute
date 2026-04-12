@@ -1,6 +1,7 @@
 r"""Prompt templates for transpilation — few-shot examples with safe placeholder escaping."""
 
 from pathlib import Path
+from typing import Dict, List, Optional
 
 import yaml
 
@@ -510,12 +511,119 @@ def _group_by_file(funcs: list) -> dict[str, list]:
     return groups
 
 
+def format_cross_chunk_context(
+    cross_chunk_exports: List[Dict[str, object]],
+    target_lang: str = "typescript",
+) -> str:
+    """Format cross-chunk export information as prompt context.
+
+    When transpiling chunk N, this provides the LLM with information
+    about symbols exported by previously-transpiled chunks (chunks 0..N-1)
+    and the output file paths where those symbols can be imported from.
+
+    Args:
+        cross_chunk_exports: List of dicts, each with:
+            - "file": str — output file path (e.g. "src/utils.ts")
+            - "exports": list[str] — exported symbol names
+            - "functions": list[dict] — (optional) function signatures
+            - "data_structures": list[dict] — (optional) class/struct names
+        target_lang: Target language (affects import syntax in example).
+
+    Returns:
+        Formatted string to include in the prompt, or empty string if
+        cross_chunk_exports is empty.
+    """
+    if not cross_chunk_exports:
+        return ""
+
+    lines: list[str] = []
+
+    if target_lang.lower() in ("typescript", "ts", "javascript", "js", "tsx"):
+        lines.append("# CROSS-CHUNK CONTEXT — symbols already transpiled in other chunks:")
+        lines.append("# When you need a symbol listed below, import it from the shown file path.")
+        lines.append("# Example: import { SymbolName } from \"./path/to/file\";")
+        lines.append("")
+    elif target_lang.lower() == "go":
+        lines.append("# CROSS-CHUNK CONTEXT — symbols already transpiled in other chunks:")
+        lines.append("# These symbols are already defined in other Go files in the same package.")
+        lines.append("# Do NOT re-define them. Reference them directly (same-package access).")
+        lines.append("")
+    elif target_lang.lower() == "rust":
+        lines.append("# CROSS-CHUNK CONTEXT — symbols already transpiled in other chunks:")
+        lines.append("# These symbols are available via crate-level use statements.")
+        lines.append("# Example: use crate::module::SymbolName;")
+        lines.append("")
+    elif target_lang.lower() == "python":
+        lines.append("# CROSS-CHUNK CONTEXT — symbols already transpiled in other chunks:")
+        lines.append("# When you need a symbol listed below, import it from the shown module path.")
+        lines.append("# Example: from module.path import SymbolName")
+        lines.append("")
+    else:
+        lines.append("# CROSS-CHUNK CONTEXT — symbols already transpiled in other chunks:")
+        lines.append("")
+
+    for chunk_info in cross_chunk_exports:
+        filepath = chunk_info.get("file", "unknown")
+        exports = chunk_info.get("exports", [])
+
+        lines.append(f"# File: {filepath}")
+
+        # Format function signatures if available
+        functions = chunk_info.get("functions", [])
+        data_structures = chunk_info.get("data_structures", [])
+
+        if functions:
+            for func in functions:
+                name = func.get("name", "?")
+                sig = func.get("signature", "")
+                if sig:
+                    lines.append(f"#   - {name}: {sig}")
+                else:
+                    lines.append(f"#   - {name}")
+
+        if data_structures:
+            for ds in data_structures:
+                name = ds.get("name", "?")
+                ds_type = ds.get("type", "class")
+                fields = ds.get("fields", [])
+                if fields:
+                    field_str = ", ".join(
+                        f if isinstance(f, str) else str(f)
+                        for f in fields[:5]
+                    )
+                    lines.append(f"#   - {name} ({ds_type}): {field_str}")
+                else:
+                    lines.append(f"#   - {name} ({ds_type})")
+
+        # If no detailed info, just list export names
+        if not functions and not data_structures and exports:
+            lines.append(f"#   Exports: {', '.join(str(e) for e in exports)}")
+
+        lines.append("")
+
+    return "\n".join(lines)
+
+
 def build_transpile_prompt(
-    blueprint: dict, source_lang: str = "python", target_lang: str = "typescript"
+    blueprint: dict,
+    source_lang: str = "python",
+    target_lang: str = "typescript",
+    cross_chunk_exports: Optional[List[Dict[str, object]]] = None,
 ) -> str:
     """
     Build a transpilation prompt from a blueprint dict.
     Includes FULL function bodies, grouped by module.
+
+    Args:
+        blueprint: Blueprint dict with 'blueprint' key containing
+            functions, data_structures, etc.
+        source_lang: Source language of the code.
+        target_lang: Target language to transpile to.
+        cross_chunk_exports: Optional list of export info from previously-
+            transpiled chunks. Each entry is a dict with 'file', 'exports',
+            and optionally 'functions' and 'data_structures'. When provided,
+            this context is prepended so the LLM knows what symbols are
+            already available and can generate correct import statements.
     """
     funcs = blueprint.get("blueprint", {}).get("functions", [])
     data_structs = blueprint.get("blueprint", {}).get("data_structures", [])
@@ -526,6 +634,12 @@ def build_transpile_prompt(
     truncated = len(funcs) > MAX_FUNCTIONS
 
     content_parts: list[str] = []
+
+    # Cross-chunk context: tell the LLM what other chunks have already exported
+    if cross_chunk_exports:
+        ctx = format_cross_chunk_context(cross_chunk_exports, target_lang)
+        if ctx:
+            content_parts.append(ctx)
 
     imports = blueprint.get("blueprint", {}).get("imports", [])
     if imports and source_lang == "python":

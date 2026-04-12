@@ -487,6 +487,7 @@ class PipelineCoordinator:
         language: str,
         output_dir: Optional[Path] = None,
         validate: bool = True,
+        cross_chunk_exports: Optional[List[Dict[str, Any]]] = None,
     ) -> Tuple[str, ValidationResult]:
         """Transpile a single chunk.
 
@@ -495,6 +496,11 @@ class PipelineCoordinator:
             repo_path: Path to the repository
             language: Source language
             output_dir: Optional output directory
+            cross_chunk_exports: Optional list of export info from previously-
+                transpiled chunks. Each entry is a dict with 'file', 'exports',
+                and optionally 'functions' and 'data_structures'. When provided,
+                this context is embedded in the blueprint so the LLM knows
+                what symbols are already available.
 
         Returns:
             Tuple of (transpiled_code, ValidationResult)
@@ -571,6 +577,11 @@ class PipelineCoordinator:
                 ]
             }
         }
+
+        # Embed cross-chunk context so the LLM knows what symbols are already
+        # available from previously-transpiled chunks.
+        if cross_chunk_exports:
+            blueprint_data["blueprint"]["cross_chunk_exports"] = cross_chunk_exports
 
         # Write to a named temp file (delete=False so we can read it after)
         tmp_file = tempfile.NamedTemporaryFile(
@@ -736,6 +747,11 @@ Requirements:
         chunks_processed = 0
         failed_chunks: List[Tuple[int, str]] = []
 
+        # Accumulate cross-chunk export info as each chunk is transpiled.
+        # This list grows; each subsequent chunk receives context about
+        # all previously-transpiled chunks' exports.
+        cross_chunk_exports_acc: List[Dict[str, Any]] = []
+
         for idx, chunk_id in enumerate(tqdm(chunk_order, desc="Transpiling chunks", unit="chunk")):
             chunk = chunks[chunk_id]
 
@@ -757,12 +773,18 @@ Requirements:
                     chunk=chunk,
                     repo_path=repo_path,
                     language=language,
-                    output_dir=output_dir
+                    output_dir=output_dir,
+                    cross_chunk_exports=cross_chunk_exports_acc if cross_chunk_exports_acc else None,
                 )
 
                 reassembler.add_transpiled(chunk_id, transpiled_code, file_paths=[f for f in chunk.files])
                 progress.status = "completed"
                 chunks_processed += 1
+
+                # Accumulate this chunk's exports for subsequent chunks
+                chunk_export_info = self._build_chunk_export_info(chunk, repo_path)
+                if chunk_export_info:
+                    cross_chunk_exports_acc.extend(chunk_export_info)
 
                 # Track validation failures — fail the pipeline if validation failed
                 if not chunk_vr.success:
@@ -960,6 +982,89 @@ Requirements:
                 passes_run=len(self.results),
                 test_result=None,
             )
+
+    def _build_chunk_export_info(
+        self,
+        chunk: Chunk,
+        repo_path: Path,
+    ) -> List[Dict[str, Any]]:
+        """Build cross-chunk export info for a completed chunk.
+
+        Returns a list of dicts (one per source file in the chunk) suitable
+        for inclusion in ``cross_chunk_exports``.  Each dict carries:
+            - file: output file path with correct extension
+            - exports: list of exported symbol names
+            - functions: list of dicts with name + signature
+            - data_structures: list of dicts with name + type + fields
+
+        This info is passed to subsequent chunks so the LLM can generate
+        correct import statements instead of duplicating definitions.
+        """
+        ext_map = {
+            ".py": ".ts",
+            ".pyw": ".ts",
+        }
+        if self.target_lang in ("typescript", "ts"):
+            default_ext = ".ts"
+        elif self.target_lang in ("javascript", "js"):
+            default_ext = ".js"
+        elif self.target_lang == "rust":
+            default_ext = ".rs"
+        elif self.target_lang in ("go", "golang"):
+            default_ext = ".go"
+        elif self.target_lang == "python":
+            default_ext = ".py"
+        else:
+            default_ext = ".txt"
+
+        result: List[Dict[str, Any]] = []
+        for src_file in chunk.files:
+            try:
+                rel = src_file.relative_to(repo_path)
+            except ValueError:
+                rel = src_file
+            out_ext = ext_map.get(rel.suffix, default_ext)
+            out_path = str(rel.with_suffix(out_ext))
+
+            # Extract function signatures for richer context
+            from repo_transmute.blueprint.extractor import extract_from_python, extract_classes_from_python
+            functions_info: list = []
+            ds_info: list = []
+
+            try:
+                if src_file.suffix == ".py":
+                    funcs = extract_from_python(src_file)
+                    for func in funcs:
+                        functions_info.append({
+                            "name": func.name,
+                            "signature": func.signature,
+                        })
+                    classes = extract_classes_from_python(src_file)
+                    for cls in classes:
+                        ds_info.append({
+                            "name": cls.name,
+                            "type": cls.type,
+                            "fields": cls.fields[:10] if cls.fields else [],
+                        })
+            except Exception:
+                pass  # Non-critical — fall back to chunk.exports
+
+            # Build export list: combine detailed extraction with chunk.exports
+            exports = list(set(
+                [f["name"] for f in functions_info] +
+                [d["name"] for d in ds_info] +
+                list(chunk.exports)
+            ))
+
+            if exports or functions_info or ds_info:
+                result.append({
+                    "file": out_path,
+                    "exports": sorted(exports),
+                    "functions": functions_info,
+                    "data_structures": ds_info,
+                })
+
+        return result
 
     def _get_extension(self) -> str:
         """Get file extension for target language."""

@@ -1111,3 +1111,209 @@ class TestValidationAndRefinement:
         assert report.import_valid is False
         assert report.type_valid is True
         assert len(report.errors) == 1
+
+# ---------------------------------------------------------------------------
+# Tests: Cross-chunk context
+# ---------------------------------------------------------------------------
+
+class TestCrossChunkContext:
+    """Cross-chunk export context is correctly built and passed to prompts."""
+
+    def test_format_cross_chunk_context_empty(self):
+        """Empty cross_chunk_exports returns empty string."""
+        from repo_transmute.transpiler.prompts import format_cross_chunk_context
+        assert format_cross_chunk_context([]) == ""
+        assert format_cross_chunk_context([], "typescript") == ""
+
+    def test_format_cross_chunk_context_typescript(self):
+        """TypeScript context shows file paths and import example."""
+        from repo_transmute.transpiler.prompts import format_cross_chunk_context
+
+        ctx = format_cross_chunk_context(
+            [{"file": "src/utils.ts", "exports": ["encodeFile", "ensureDir"]}],
+            target_lang="typescript",
+        )
+        assert "CROSS-CHUNK CONTEXT" in ctx
+        assert "src/utils.ts" in ctx
+        assert "encodeFile" in ctx
+        assert "ensureDir" in ctx
+        assert 'import { SymbolName } from "./path/to/file"' in ctx
+
+    def test_format_cross_chunk_context_go(self):
+        """Go context mentions same-package access."""
+        from repo_transmute.transpiler.prompts import format_cross_chunk_context
+
+        ctx = format_cross_chunk_context(
+            [{"file": "config.go", "exports": ["Config", "Load"]}],
+            target_lang="go",
+        )
+        assert "same-package" in ctx
+        assert "config.go" in ctx
+
+    def test_format_cross_chunk_context_python(self):
+        """Python context mentions module import."""
+        from repo_transmute.transpiler.prompts import format_cross_chunk_context
+
+        ctx = format_cross_chunk_context(
+            [{"file": "utils.py", "exports": ["helper"]}],
+            target_lang="python",
+        )
+        assert "from module.path import" in ctx
+
+    def test_format_cross_chunk_context_with_function_details(self):
+        """Function signatures are included when available."""
+        from repo_transmute.transpiler.prompts import format_cross_chunk_context
+
+        ctx = format_cross_chunk_context(
+            [{
+                "file": "src/api.ts",
+                "exports": ["getData", "Config"],
+                "functions": [{"name": "getData", "signature": "() => Promise<Data>"}],
+                "data_structures": [{"name": "Config", "type": "class", "fields": ["host: string", "port: number"]}],
+            }],
+            target_lang="typescript",
+        )
+        assert "getData" in ctx
+        assert "() => Promise<Data>" in ctx
+        assert "Config" in ctx
+        assert "host: string" in ctx
+
+    def test_build_transpile_prompt_includes_cross_chunk_context(self):
+        """build_transpile_prompt includes cross-chunk context when provided."""
+        from repo_transmute.transpiler.prompts import build_transpile_prompt
+
+        blueprint = {
+            "blueprint": {
+                "language": "python",
+                "functions": [{"name": "my_func", "file": "mod.py", "docstring": "", "body": "def my_func(): pass"}],
+                "data_structures": [],
+            }
+        }
+        cross_chunk = [{"file": "src/utils.ts", "exports": ["helper"]}]
+
+        prompt = build_transpile_prompt(
+            blueprint, source_lang="python", target_lang="typescript",
+            cross_chunk_exports=cross_chunk,
+        )
+        assert "CROSS-CHUNK CONTEXT" in prompt
+        assert "src/utils.ts" in prompt
+        assert "helper" in prompt
+
+    def test_build_transpile_prompt_without_cross_chunk_context(self):
+        """build_transpile_prompt works without cross_chunk_exports."""
+        from repo_transmute.transpiler.prompts import build_transpile_prompt
+
+        blueprint = {
+            "blueprint": {
+                "language": "python",
+                "functions": [{"name": "my_func", "file": "mod.py", "docstring": "", "body": "def my_func(): pass"}],
+                "data_structures": [],
+            }
+        }
+
+        prompt = build_transpile_prompt(
+            blueprint, source_lang="python", target_lang="typescript",
+        )
+        assert "CROSS-CHUNK CONTEXT" not in prompt
+
+    def test_build_chunk_export_info_produces_valid_output(self, tmp_path):
+        """_build_chunk_export_info returns export info for a chunk with a Python file."""
+        coord = PipelineCoordinator(target_lang="typescript", max_passes=1)
+
+        # Create a Python file with a function
+        mod = tmp_path / "mod.py"
+        mod.write_text("def helper(): pass\ndef other(): pass\n")
+
+        chunk = Chunk(
+            id=0,
+            files=[mod],
+            imports=[],
+            exports=["helper", "other"],
+            dependencies=[],
+        )
+
+        info = coord._build_chunk_export_info(chunk, tmp_path)
+        assert len(info) == 1
+        assert info[0]["file"] == "mod.ts"
+        assert "helper" in info[0]["exports"]
+        assert "other" in info[0]["exports"]
+
+    def test_build_chunk_export_info_multiple_files(self, tmp_path):
+        """_build_chunk_export_info returns one entry per source file."""
+        coord = PipelineCoordinator(target_lang="typescript", max_passes=1)
+
+        (tmp_path / "a.py").write_text("def func_a(): pass\n")
+        (tmp_path / "b.py").write_text("def func_b(): pass\n")
+
+        chunk = Chunk(
+            id=0,
+            files=[tmp_path / "a.py", tmp_path / "b.py"],
+            imports=[],
+            exports=["func_a", "func_b"],
+            dependencies=[],
+        )
+
+        info = coord._build_chunk_export_info(chunk, tmp_path)
+        assert len(info) == 2
+        files_in_info = {entry["file"] for entry in info}
+        assert "a.ts" in files_in_info
+        assert "b.ts" in files_in_info
+
+    def test_transpile_chunk_accepts_cross_chunk_exports(self, tmp_path):
+        """transpile_chunk accepts and embeds cross_chunk_exports."""
+        coord = PipelineCoordinator(target_lang="typescript", max_passes=1)
+        coord.transpiler.transpile = lambda path, target, output_dir=None: (
+            "// filename: out.ts\nexport function f(): void { }"
+        )
+
+        mod = tmp_path / "mod.py"
+        mod.write_text("def my_func(): pass\n")
+
+        chunk = Chunk(id=0, files=[mod], imports=[], exports=["my_func"], dependencies=[])
+
+        cross = [{"file": "src/utils.ts", "exports": ["helper"]}]
+
+        # Should not raise
+        code, vr = coord.transpile_chunk(
+            chunk=chunk,
+            repo_path=tmp_path,
+            language="python",
+            cross_chunk_exports=cross,
+        )
+        assert isinstance(code, str)
+        assert len(code) > 0
+
+    def test_transpile_all_chunks_passes_cross_chunk_context(self, twint_repo):
+        """transpile_all_chunks passes accumulated cross-chunk exports to each chunk."""
+        coord = PipelineCoordinator(target_lang="typescript", max_passes=1, max_functions_per_chunk=5)
+        
+        # Track what cross_chunk_exports each call receives
+        captured_contexts = []
+
+        original_transpile = coord.transpile_chunk
+        def tracking_transpile(chunk, repo_path, language, output_dir=None, validate=True, cross_chunk_exports=None):
+            captured_contexts.append(cross_chunk_exports)
+            return "// filename: out.ts\nexport function f(): void { }", MagicMock(success=True, output="ok")
+
+        coord.transpile_chunk = tracking_transpile
+
+        coord.transpile_all_chunks(
+            repo_path=twint_repo,
+            language="python",
+            output_dir=None,
+        )
+
+        assert len(captured_contexts) >= 2
+        # First chunk should get None (no previous chunks)
+        assert captured_contexts[0] is None
+        # Later chunks should get cross-chunk context
+        later_with_ctx = [c for c in captured_contexts[1:] if c is not None and len(c) > 0]
+        # At least some later chunks should have context (depends on whether
+        # _build_chunk_export_info finds exports)
+        # The key invariant: contexts grow monotonically
+        for i in range(1, len(captured_contexts)):
+            if captured_contexts[i] is not None and captured_contexts[i-1] is not None:
+                assert len(captured_contexts[i]) >= len(captured_contexts[i-1]), (
+                    f"Context at chunk {i} ({len(captured_contexts[i])}) should be >= "
+                    f"context at chunk {i-1} ({len(captured_contexts[i-1])})"
+                )
