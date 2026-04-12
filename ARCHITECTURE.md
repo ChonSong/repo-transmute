@@ -4,16 +4,14 @@
 
 ## Vision
 
-A heartbeat-driven system that:
-1. Clones repos
-2. Analyzes every line of code
-3. Generates language-agnostic blueprints
-4. Recursively handles dependencies
-5. Outputs idiomatic Rust code
-6. Provides semantic search across all code/artifacts
-7. (Future) Unified frontend via screenshot-based reconstruction
+AI-powered code transpilation engine:
+1. Ingests repos (clone + analyze)
+2. Generates language-agnostic blueprints
+3. Transpiles to TypeScript, Rust, Python (Go in progress)
+4. Validates output compiles
+5. Provides semantic search via txtai/FAISS
 
-**Core Language: Python** — Simplifies AI/ML integration, txtai, tree-sitter bindings
+**Core Language: Python** — simplifies AI/ML integration, txtai, tree-sitter
 
 ---
 
@@ -269,43 +267,9 @@ txtai.transform("convert this Python blueprint to Go using standard libraries")
 
 ---
 
-### 6. Frontend Unification (Screenshot Strategy) (`src/frontend/`)
+### 6. Frontend Unification (Planned)
 
-```
-src/frontend/
-├── capture.py     # Screenshot with Playwright
-├── vision.py      # LLM vision analysis
-├── blueprint.py   # Component blueprint generation
-└── generator.py   # Leptos/Dioxus component output
-```
-
-**Flow:**
-
-```
-URL / Local HTML
-      │
-      ▼
-┌─────────────┐
-│  Playwright │──▶ Screenshots (mobile, tablet, desktop)
-└─────────────┘
-      │
-      ▼
-┌─────────────┐
-│  LLM Vision │──▶ "Card with avatar, name, email, CTA button"
-└─────────────┘
-      │
-      ▼
-┌─────────────┐
-│  Component  │──▶ Layout spec + interactions
-│  Blueprint  │
-└─────────────┘
-      │
-      ▼
-┌─────────────┐
-│  Leptos/    │──▶ .rs component files
-│  Dioxus     │
-└─────────────┘
-```
+Screenshot-based component reconstruction using Playwright + LLM vision analysis. See ROADMAP.md Phase 9 for current status.
 
 ---
 

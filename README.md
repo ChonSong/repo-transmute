@@ -75,6 +75,25 @@ repo-reaper context "MCP server dashboard" --include-body
 repo-reaper index-all data/cache
 ```
 
+
+
+## Multi-Agent Pipeline
+
+```
+CODER → REVIEWER → TDD → SECURITY
+  │         │         │        │
+  ▼         ▼         ▼        ▼
+Ingest +  Quality   Test    Security
+Transpile Review  Generation  Audit
+```
+
+| Agent | Role | Success Criteria |
+|---|---|---|
+| CODER | Ingest repos, compatibility checks, transpile | Confidence >= 80% |
+| REVIEWER | Quality assurance — types, error handling, idiomatic code | Score >= 7/10 |
+| TDD | Test generation | Coverage >= 80% |
+| SECURITY | OWASP Top 10, secrets, injection audit | No critical issues |
+
 ## Architecture
 
 ```

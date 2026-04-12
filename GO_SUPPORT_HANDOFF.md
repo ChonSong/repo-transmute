@@ -77,7 +77,7 @@ python3 -m pytest tests/test_validate.py tests/test_compatibility.py -v
 | `src/repo_transmute/blueprint/extractor.py` | Modified |
 | `tests/fixtures/sample.go` | Done |
 | `tests/test_go_parser.py` | Done (21 tests) |
-| `GO_SUPPORT_SCAFFOLD.md` | Reference only |
+| ~~`GO_SUPPORT_SCAFFOLD.md`~~ | Archived to `docs/archive/` |
 
 ## Context
 

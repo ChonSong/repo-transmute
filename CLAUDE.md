@@ -285,9 +285,9 @@ repo-transmute/
 ├── CLAUDE.md                   # This file
 ├── README.md                   # User-facing docs
 ├── ARCHITECTURE.md            # Detailed architecture
-└── PIPELINE.md                # Multi-agent pipeline docs
+└── README.md (Multi-Agent Pipeline section)                # Multi-agent pipeline docs
 ```
 
 ---
 
-*For more details, see [ARCHITECTURE.md](./ARCHITECTURE.md) and [PIPELINE.md](./PIPELINE.md)*
+*For more details, see [ARCHITECTURE.md](./ARCHITECTURE.md) and [README.md (Multi-Agent Pipeline section)](./README.md (Multi-Agent Pipeline section))*
