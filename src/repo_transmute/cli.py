@@ -298,9 +298,11 @@ def chunk(repo: str, cache_dir: Path, output_dir: Path, chunk_size: int = 20):
             click.echo(f"Error cloning repo: {e}", err=True)
             return
 
-    click.echo(f"Chunking {repo} (max_functions={chunk_size})...")
+    # Detect language so chunk_repository uses correct file extensions
+    language = detect_language(repo_path)
+    click.echo(f"Chunking {repo} (max_functions={chunk_size}, language={language})...")
 
-    chunks = chunk_repository(repo_path, max_functions=chunk_size)
+    chunks = chunk_repository(repo_path, max_functions=chunk_size, language=language)
 
     click.echo(f"\nCreated {len(chunks)} chunks:")
 
@@ -504,7 +506,7 @@ def _transpile_single_chunk(
     language = detect_language(repo_path)
     click.echo(f"Detected language: {language}")
 
-    chunks = chunk_repository(repo_path, max_functions=max_functions)
+    chunks = chunk_repository(repo_path, max_functions=max_functions, language=language)
     total = len(chunks)
 
     if chunk_id < 0 or chunk_id >= total:

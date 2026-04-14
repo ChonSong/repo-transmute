@@ -744,7 +744,7 @@ Requirements:
         print(f"Chunking repository: {repo_path.name}")
 
         # chunk_repository accepts max_functions (not chunk_size)
-        chunks = chunk_repository(repo_path, max_functions=self.max_functions_per_chunk)
+        chunks = chunk_repository(repo_path, max_functions=self.max_functions_per_chunk, language=language)
         total_chunks = len(chunks)
         print(f"Created {total_chunks} chunks")
 
@@ -1086,7 +1086,8 @@ Requirements:
 
 def chunk_repository(
     repo_path: Path,
-    max_functions: int = 30
+    max_functions: int = 30,
+    language: Optional[str] = None,
 ) -> List[Chunk]:
     """Chunk repository files into groups for processing.
 
@@ -1096,13 +1097,15 @@ def chunk_repository(
     Args:
         repo_path: Path to repository
         max_functions: Maximum functions per chunk
+        language: Source language (python, go, javascript, typescript, rust).
+                  Defaults to "python" if not specified.
 
     Returns:
         List of file chunks
     """
     # Import from chunker module
     from repo_transmute.transpiler.chunker import chunk_repository as cr
-    return cr(repo_path, max_functions=max_functions)
+    return cr(repo_path, max_functions=max_functions, language=language)
 
 
 def analyze_dependencies(repo_path: Path) -> dict:

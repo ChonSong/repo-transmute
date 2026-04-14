@@ -3,6 +3,8 @@ Module-aware chunking for large repositories.
 
 Handles splitting large codebases into transpilable chunks while
 preserving module boundaries and tracking dependencies.
+
+Supports multiple source languages: Python, Go, TypeScript/JavaScript, Rust.
 """
 
 from __future__ import annotations
@@ -12,6 +14,25 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path, PurePath
 from typing import List, Dict, Set, Optional, Tuple
+
+
+# ---------------------------------------------------------------------------
+# Language → file extensions mapping
+# ---------------------------------------------------------------------------
+
+LANG_EXTENSIONS: Dict[str, Set[str]] = {
+    "python": {".py"},
+    "go": {".go"},
+    "javascript": {".js", ".jsx"},
+    "typescript": {".ts", ".tsx"},
+    "rust": {".rs"},
+}
+
+# Directories to ignore when walking repos
+IGNORE_DIRS = {
+    ".git", "__pycache__", "node_modules", "venv", "env", ".venv",
+    "dist", "build", ".idea", ".vscode", ".cache",
+}
 
 
 @dataclass
@@ -31,7 +52,28 @@ class Chunk:
         return f"chunk_{self.id}"
 
 
+# ---------------------------------------------------------------------------
+# Language-aware function counting
+# ---------------------------------------------------------------------------
+
 def count_functions(file_path: Path) -> int:
+    """Count the number of functions/classes in a source file.
+
+    Dispatches to language-specific counters based on file extension.
+    """
+    ext = file_path.suffix.lower()
+    if ext == ".py":
+        return _count_python_functions(file_path)
+    elif ext == ".go":
+        return _count_go_functions(file_path)
+    elif ext in (".js", ".jsx", ".ts", ".tsx"):
+        return _count_js_functions(file_path)
+    elif ext == ".rs":
+        return _count_rust_functions(file_path)
+    return 0
+
+
+def _count_python_functions(file_path: Path) -> int:
     """Count the number of functions/classes in a Python file."""
     try:
         content = file_path.read_text(encoding="utf-8", errors="ignore")
@@ -46,7 +88,66 @@ def count_functions(file_path: Path) -> int:
         return len(re.findall(r"^(\s*)(def|class|async\s+def)\s+", content, re.MULTILINE))
 
 
+def _count_go_functions(file_path: Path) -> int:
+    """Count top-level functions and methods in a Go file.
+
+    Uses the goast binary when available, otherwise falls back to regex.
+    """
+    try:
+        from repo_transmute.transpiler.go_parser import extract_from_go, extract_structs_from_go, extract_interfaces_from_go
+        funcs = extract_from_go(file_path)
+        structs = extract_structs_from_go(file_path)
+        ifaces = extract_interfaces_from_go(file_path)
+        return len(funcs) + len(structs) + len(ifaces)
+    except Exception:
+        # Regex fallback
+        try:
+            content = file_path.read_text(encoding="utf-8", errors="ignore")
+            return len(re.findall(r"^func\s+", content, re.MULTILINE))
+        except (FileNotFoundError, OSError):
+            return 0
+
+
+def _count_js_functions(file_path: Path) -> int:
+    """Count functions in a JavaScript/TypeScript file."""
+    content = file_path.read_text(encoding="utf-8", errors="ignore")
+    count = 0
+    # function declarations
+    count += len(re.findall(r"(?:export\s+)?(?:async\s+)?function\s+\w+", content))
+    # Arrow functions with names: const name = (...) => ...
+    count += len(re.findall(r"(?:export\s+)?(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>", content))
+    return count
+
+
+def _count_rust_functions(file_path: Path) -> int:
+    """Count functions in a Rust file."""
+    content = file_path.read_text(encoding="utf-8", errors="ignore")
+    # Count fn declarations (top-level and in impl blocks)
+    return len(re.findall(r"\bfn\s+\w+", content))
+
+
+# ---------------------------------------------------------------------------
+# Language-aware import extraction
+# ---------------------------------------------------------------------------
+
 def extract_imports(file_path: Path) -> List[str]:
+    """Extract import statements from a source file.
+
+    Dispatches to language-specific extractors based on file extension.
+    """
+    ext = file_path.suffix.lower()
+    if ext == ".py":
+        return _extract_python_imports(file_path)
+    elif ext == ".go":
+        return _extract_go_imports(file_path)
+    elif ext in (".js", ".jsx", ".ts", ".tsx"):
+        return _extract_js_imports(file_path)
+    elif ext == ".rs":
+        return _extract_rust_imports(file_path)
+    return []
+
+
+def _extract_python_imports(file_path: Path) -> List[str]:
     """Extract import statements from a Python file."""
     try:
         content = file_path.read_text(encoding="utf-8", errors="ignore")
@@ -68,7 +169,59 @@ def extract_imports(file_path: Path) -> List[str]:
         return []
 
 
+def _extract_go_imports(file_path: Path) -> List[str]:
+    """Extract import paths from a Go file."""
+    try:
+        from repo_transmute.transpiler.go_parser import extract_imports_from_go
+        go_imports = extract_imports_from_go(file_path)
+        return [gi.path for gi in go_imports]
+    except Exception:
+        # Fallback regex
+        content = file_path.read_text(encoding="utf-8", errors="ignore")
+        return re.findall(r'"([^"]+)"', content)
+
+
+def _extract_js_imports(file_path: Path) -> List[str]:
+    """Extract import paths from a JavaScript/TypeScript file."""
+    content = file_path.read_text(encoding="utf-8", errors="ignore")
+    imports = []
+    # import X from 'path'
+    for m in re.finditer(r"(?:import|from)\s+['\"]([^'\"]+)['\"]", content):
+        imports.append(m.group(1))
+    # require('path')
+    for m in re.finditer(r"require\s*\(\s*['\"]([^'\"]+)['\"]\s*\)", content):
+        imports.append(m.group(1))
+    return imports
+
+
+def _extract_rust_imports(file_path: Path) -> List[str]:
+    """Extract use statements from a Rust file."""
+    content = file_path.read_text(encoding="utf-8", errors="ignore")
+    return re.findall(r"use\s+([^;]+);", content)
+
+
+# ---------------------------------------------------------------------------
+# Language-aware export extraction
+# ---------------------------------------------------------------------------
+
 def extract_exports(file_path: Path) -> List[str]:
+    """Extract exported names from a source file.
+
+    Dispatches to language-specific extractors based on file extension.
+    """
+    ext = file_path.suffix.lower()
+    if ext == ".py":
+        return _extract_python_exports(file_path)
+    elif ext == ".go":
+        return _extract_go_exports(file_path)
+    elif ext in (".js", ".jsx", ".ts", ".tsx"):
+        return _extract_js_exports(file_path)
+    elif ext == ".rs":
+        return _extract_rust_exports(file_path)
+    return []
+
+
+def _extract_python_exports(file_path: Path) -> List[str]:
     """Extract exported names (top-level functions, classes, __all__)."""
     try:
         content = file_path.read_text(encoding="utf-8", errors="ignore")
@@ -90,6 +243,85 @@ def extract_exports(file_path: Path) -> List[str]:
         return exports
     except Exception:
         return []
+
+
+def _extract_go_exports(file_path: Path) -> List[str]:
+    """Extract exported symbol names from a Go file (PascalCase names)."""
+    try:
+        from repo_transmute.transpiler.go_parser import extract_from_go, extract_structs_from_go, extract_interfaces_from_go
+        exports = []
+        for f in extract_from_go(file_path):
+            # In Go, only PascalCase names are exported
+            if f.name[0].isupper():
+                exports.append(f.name)
+        for s in extract_structs_from_go(file_path):
+            if s.name[0].isupper():
+                exports.append(s.name)
+        for i in extract_interfaces_from_go(file_path):
+            if i.name[0].isupper():
+                exports.append(i.name)
+        return exports
+    except Exception:
+        # Regex fallback: find PascalCase func/struct/interface names
+        content = file_path.read_text(encoding="utf-8", errors="ignore")
+        exports = []
+        for m in re.finditer(r"^func\s+([A-Z]\w+)", content, re.MULTILINE):
+            exports.append(m.group(1))
+        for m in re.finditer(r"^type\s+([A-Z]\w+)\s+(?:struct|interface)", content, re.MULTILINE):
+            exports.append(m.group(1))
+        return exports
+
+
+def _extract_js_exports(file_path: Path) -> List[str]:
+    """Extract exported names from a JavaScript/TypeScript file."""
+    content = file_path.read_text(encoding="utf-8", errors="ignore")
+    exports = []
+    # export function name
+    for m in re.finditer(r"export\s+(?:async\s+)?function\s+(\w+)", content):
+        exports.append(m.group(1))
+    # export const/let/var name
+    for m in re.finditer(r"export\s+(?:const|let|var)\s+(\w+)", content):
+        exports.append(m.group(1))
+    # export class name
+    for m in re.finditer(r"export\s+class\s+(\w+)", content):
+        exports.append(m.group(1))
+    # TypeScript: export interface name
+    for m in re.finditer(r"export\s+interface\s+(\w+)", content):
+        exports.append(m.group(1))
+    # TypeScript: export type name
+    for m in re.finditer(r"export\s+type\s+(\w+)", content):
+        exports.append(m.group(1))
+    # export { a, b, c }
+    for m in re.finditer(r"export\s+\{([^}]+)\}", content):
+        for part in m.group(1).split(","):
+            part = part.strip()
+            if " as " in part:
+                part = part.split(" as ")[-1].strip()
+            if part:
+                exports.append(part)
+    # export default function name
+    for m in re.finditer(r"export\s+default\s+(?:async\s+)?function\s+(\w+)", content):
+        exports.append(m.group(1))
+    return exports
+
+
+def _extract_rust_exports(file_path: Path) -> List[str]:
+    """Extract public items from a Rust file."""
+    content = file_path.read_text(encoding="utf-8", errors="ignore")
+    exports = []
+    # pub fn name
+    for m in re.finditer(r"pub\s+(?:async\s+)?fn\s+(\w+)", content):
+        exports.append(m.group(1))
+    # pub struct name
+    for m in re.finditer(r"pub\s+struct\s+(\w+)", content):
+        exports.append(m.group(1))
+    # pub enum name
+    for m in re.finditer(r"pub\s+enum\s+(\w+)", content):
+        exports.append(m.group(1))
+    # pub trait name
+    for m in re.finditer(r"pub\s+trait\s+(\w+)", content):
+        exports.append(m.group(1))
+    return exports
 
 
 def _symbol_from_qualified_import(imp: str) -> Optional[str]:
@@ -131,6 +363,39 @@ def _symbol_from_qualified_import(imp: str) -> Optional[str]:
         return None
     return last
 
+
+def _symbol_from_go_import(imp: str) -> Optional[str]:
+    """Extract a symbol-like component from a Go import path.
+
+    Go imports look like 'fmt', 'encoding/json', 'github.com/user/repo/pkg'.
+    For cross-chunk detection, we look for local package names.
+    """
+    if not imp:
+        return None
+    # Last component of the import path
+    last = imp.rsplit("/", 1)[-1]
+    if last and re.match(r'^[A-Za-z_]\w*$', last):
+        return last
+    return None
+
+
+def _symbol_from_js_import(imp: str) -> Optional[str]:
+    """Extract a symbol-like component from a JS/TS import path.
+
+    For local imports (starting with .), extract the filename stem.
+    """
+    if not imp or not imp.startswith("."):
+        return None
+    # Get the filename stem from relative paths
+    stem = Path(imp).stem
+    if stem and stem != "index" and re.match(r'^[A-Za-z_]\w*$', stem):
+        return stem
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Chunking logic
+# ---------------------------------------------------------------------------
 
 def chunk_by_files(files: List[Path], max_functions: int = 30) -> List[List[Path]]:
     """
@@ -178,8 +443,20 @@ def chunk_by_files(files: List[Path], max_functions: int = 30) -> List[List[Path
     return chunks
 
 
-def create_chunks(files: List[Path], base_path: Optional[Path] = None, max_functions: int = 30) -> List[Chunk]:
-    """Create Chunk objects with metadata from a list of files."""
+def create_chunks(
+    files: List[Path],
+    base_path: Optional[Path] = None,
+    max_functions: int = 30,
+    language: str = "python",
+) -> List[Chunk]:
+    """Create Chunk objects with metadata from a list of files.
+
+    Args:
+        files: Source files to chunk.
+        base_path: Repository root (for relative paths).
+        max_functions: Maximum functions per chunk.
+        language: Source language — affects import/export extraction.
+    """
     if not files:
         return []
 
@@ -212,25 +489,31 @@ def create_chunks(files: List[Path], base_path: Optional[Path] = None, max_funct
 
     # Cross-chunk dependency detection.
     #
-    # Problem: ``extract_imports`` stores qualified names (e.g. 'mod0.helper.User')
-    # while ``extract_exports`` stores bare symbol names (e.g. 'User').  A naive
-    # 'export in imports' check therefore never matches cross-chunk dependencies.
+    # For each import, try to resolve the bare symbol name and check
+    # whether that symbol is exported by another chunk.
     #
-    # Fix: for each qualified import, strip the leading dotted prefix to recover
-    # the bare symbol name and check whether that symbol is exported by another
-    # chunk.  Stdlib imports (os.path.join, etc.) are excluded.
-    #
-    # Example:
-    #   chunk0 exports:    ['helper', 'User']
-    #   chunk1 imports:    ['mod0.helper.User', 'os.path.join']
-    #   chunk1 symbols:    ['User']           (strip prefix)
-    #   Match: 'User' in chunk0.exports -> chunk1 depends on chunk0
-    #   'os.path.join' stripped -> 'join' not in any export -> not a dep
+    # Language-specific import resolution:
+    #   Python:  'mod0.helper.User' -> strip prefix -> 'User'
+    #   Go:      'github.com/user/repo/pkg' -> strip prefix -> 'pkg'
+    #   JS/TS:   './utils' -> filename stem -> 'utils'
+    #   Rust:    'crate::module::Symbol' -> strip path -> 'Symbol'
     #
     for i, chunk in enumerate(chunks):
         found_deps: Set[int] = set()
         for imp in chunk.imports:
-            sym = _symbol_from_qualified_import(imp)
+            sym = None
+            if language == "python":
+                sym = _symbol_from_qualified_import(imp)
+            elif language == "go":
+                sym = _symbol_from_go_import(imp)
+            elif language in ("javascript", "typescript"):
+                sym = _symbol_from_js_import(imp)
+            elif language == "rust":
+                # Rust: 'crate::module::Symbol' -> 'Symbol'
+                if "::" in imp:
+                    sym = imp.rsplit("::", 1)[-1]
+                    if not re.match(r'^[A-Za-z_]\w*$', sym):
+                        sym = None
             if sym is None:
                 continue
             for j, other in enumerate(chunks):
@@ -637,23 +920,61 @@ class Reassembler:
         return self._topological_sort()
 
 
-def chunk_repository(repo_path: Path, max_functions: int = 30) -> List[Chunk]:
-    """
-    Chunk an entire repository by finding all Python files.
+def _find_source_files(repo_path: Path, extensions: Set[str]) -> List[Path]:
+    """Find all source files matching the given extensions, excluding noise dirs."""
+    result = []
+    for f in repo_path.rglob("*"):
+        if not f.is_file():
+            continue
+        if f.suffix.lower() not in extensions:
+            continue
+        try:
+            rel_parts = f.relative_to(repo_path).parts
+        except ValueError:
+            continue
+        # Skip hidden dirs, noise dirs, and test vendor dirs
+        if any(part.startswith(".") for part in rel_parts):
+            continue
+        if any(part in IGNORE_DIRS for part in rel_parts):
+            continue
+        # Skip Go test files (they're not source for transpilation)
+        if f.suffix == ".go" and f.name.endswith("_test.go"):
+            continue
+        result.append(f)
+    return sorted(result)
 
-    Files are filtered to exclude:
-    - Hidden files/directories (starting with '.')
-    - Virtual environments ('venv', 'env')
-    - Python cache ('__pycache__')
-    - node_modules
 
-    Filtering is applied to path components RELATIVE to repo_path.
+def chunk_repository(
+    repo_path: Path,
+    max_functions: int = 30,
+    language: Optional[str] = None,
+) -> List[Chunk]:
+    """Chunk an entire repository by finding source files for the given language.
+
+    If ``language`` is None, defaults to "python" for backward compatibility.
+
+    Args:
+        repo_path: Root of the repository to chunk.
+        max_functions: Maximum functions/structures per chunk.
+        language: Source language (python, go, javascript, typescript, rust).
+                  Determines which files are found and how imports/exports
+                  are extracted.  Defaults to "python".
+
+    Returns:
+        List of Chunk objects ready for transpilation.
     """
-    py_files = [
-        f for f in repo_path.rglob("*.py")
-        if not any(
-            part.startswith(".") or part in ("venv", "env", "__pycache__", "node_modules")
-            for part in f.relative_to(repo_path).parts
-        )
-    ]
-    return create_chunks(py_files, base_path=repo_path, max_functions=max_functions)
+    if language is None:
+        language = "python"
+
+    extensions = LANG_EXTENSIONS.get(language, {".py"})
+    source_files = _find_source_files(repo_path, extensions)
+
+    if not source_files:
+        return []
+
+    return create_chunks(
+        source_files,
+        base_path=repo_path,
+        max_functions=max_functions,
+        language=language,
+    )
