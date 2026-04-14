@@ -1,54 +1,68 @@
-# Night Owl Status — RepoTransmute
+# Night Owl Status
 
-**Last updated:** 2026-04-12T06:30 UTC
+## 2026-04-14 (Night Owl Session)
 
-## Session Summary
+**What was worked on:** Multi-language chunker support + Rust/Go dependency parsing.
 
-Night Owl session started 2026-04-12 06:01 UTC (~16:01 Sydney time). Worked ~90 minutes on two component gaps.
+**What was built:**
 
-## Work Done This Session
+### 1. Multi-language chunker (commit `7cb0729`)
+- `chunker.py` now supports Go, JavaScript/TypeScript, and Rust alongside Python
+- `LANG_EXTENSIONS` mapping, `IGNORE_DIRS` filtering, `_find_source_files()` utility
+- Language-aware `count_functions()`, `extract_imports()`, `extract_exports()` dispatchers
+- `chunk_repository()` and `create_chunks()` accept `language` parameter
+- **Bug fix**: CLI `chunk` and `transpile_chunk` commands now pass detected language to `chunk_repository()` (was always defaulting to Python)
+- **Bug fix**: `PipelineCoordinator.transpile_all_chunks()` now passes language to `chunk_repository()`
+- **Bug fix**: `_count_go_functions()` regex fallback now handles `FileNotFoundError`
+- **Bug fix**: `_extract_js_exports()` now detects TypeScript `interface` and `type` exports
+- **Bug fix**: `_count_js_functions()` now handles `export default function` and counts classes
+- 42 new tests in `test_multilang_chunker.py`
 
-### 1. Cross-Chunk Context (commit `78df5b7`)
+### 2. Rust/Go dependency parsing (commit `9e7a901`)
+- `RUST_USE_REGEXES` pattern + `_parse_rust_use()` for Rust `use` statement parsing
+- Handles simple uses (`use std::fs`), grouped (`use serde::{Serialize, Deserialize}`), and qualified
+- `parse_cargo_toml()` extracts dependencies and dev-dependencies from Cargo.toml
+  - Handles workspace inheritance, inline table deps, commented lines
+- `parse_go_mod()` extracts module path, Go version, require and indirect deps
+- `parse_imports()` now dispatches to Rust for `.rs` files
+- `_infer_language()` now recognizes `.rs` extension
+- 20 new tests in `test_dependency_rust.py`
 
-**Problem**: When transpiling chunk N, the LLM had no knowledge of what other chunks exported. This led to:
-- Duplicate definitions (LLM re-implements symbols from other chunks)
-- Incorrect import paths (LLM guesses instead of using actual output file paths)
-- Missing cross-chunk references
+**Tests:** 620 passed, 8 skipped (up from 558)
 
-**Solution**: Progressive cross-chunk export accumulation:
-- `transpile_all_chunks()` maintains `cross_chunk_exports_acc` list
-- After each chunk is transpiled, `_build_chunk_export_info()` extracts its exports
-- Subsequent chunks receive the accumulated context via `cross_chunk_exports` parameter
-- Context includes: output file paths, export names, function signatures, data structure fields
-- `build_transpile_prompt()` renders context as "# CROSS-CHUNK CONTEXT" section
+**Commits:**
+- `7cb0729` — feat: multi-language chunker — Go, JS/TS, Rust support
+- `9e7a901` — feat: Rust dependency parsing — use statements, Cargo.toml, go.mod
 
-**Files changed**:
-- `src/repo_transmute/transpiler/prompts.py` — Added `format_cross_chunk_context()`, updated `build_transpile_prompt()`
-- `src/repo_transmute/pipeline/coordinator.py` — Added `_build_chunk_export_info()`, updated `transpile_chunk()` and `transpile_all_chunks()`
-- `src/repo_transmute/transpiler/llm.py` — Pass `cross_chunk_exports` from blueprint dict to prompt builder
+**Next steps:**
+- All phases complete — no immediate next step. Awaiting Sean direction.
+- Remaining open item: end-to-end validation of `run_tests()` with a real transpiled project
 
-**Tests added**: 11 (in `tests/test_e2e_pipeline.py::TestCrossChunkContext`)
+## 2026-04-11 (Night Owl Session)
 
-### 2. Go Test Generation Integration (commit `beb8c54`)
+**What was worked on:** ClawFlow orchestration — RepoTransmute heartbeat lobster workflow (Phase 7).
 
-**Problem**: `go_test_gen.py` module existed but wasn't used in the pipeline. The coordinator's `_generate_go_tests()` used basic regex, producing low-quality test stubs.
+**What was built:**
+1. `scripts/flows/repo_transmute_heartbeat.lobster` — lobster workflow orchestrating 5 steps
+2. `scripts/check_repos_stale.py` — detects stale cached repos via git remote HEAD vs local HEAD
+3. `scripts/reingest_stale_repos.py` — re-ingests stale repos via `repo-transmute ingest`
+4. `scripts/run_index.py` — runs TXTAI indexer, parses and reports stats
+5. `scripts/transpile_sample.py` — validates pipeline by transpiling sample chunk(s)
+6. `scripts/post_observability.py` — posts Discord observability summary to #night-owl-reports
 
-**Solution**: Replaced `_generate_go_tests()` with AST-aware implementation that:
-- Uses `go_test_gen.generate_test_file()` for proper Go AST parsing
-- Generates richer stubs with parameter names and return types
-- Falls back to regex on parse errors
-- Handles missing/empty files gracefully
+**Pipeline test run (2026-04-11):**
+```
+check_repos_stale: CLEAN|0 (all 11 repos up-to-date)
+run_index: INDEX_OK|11repos 0new (incremental, nothing new)
+transpile_sample: TRANSPILE_OK|1/1 (lucmuss__nanobot-webgui chunk0 validated ✓)
+```
 
-**Tests added**: 4 (in `tests/test_e2e_pipeline.py::TestGoTestGenIntegration`)
+**Tests:** 541 passed, 8 skipped
 
-## Test Results
+**Commit:** `8c85cec` — "feat: ClawFlow orchestration — RepoTransmute heartbeat lobster workflow"
 
-- **Before**: 543 passed, 8 skipped
-- **After**: 558 passed, 8 skipped (+15 new tests)
+**Note:** Also fixed bug discovered during ClawFlow testing — `_transpile_single_chunk` in `cli.py` wasn't unpacking the `Tuple[str, ValidationResult]` return from `coordinator.transpile_chunk()`, causing transpiled code to print as tuple representation. Fixed in commit `77b98d3`.
 
-## Remaining Open Items
-
-1. **Runtime test execution**: `run_tests()` implemented but not verified end-to-end
-2. **Directory structure preservation**: Potential issues with LLM-generated paths
-3. ~~Cross-chunk context~~ → **DONE**
-4. ~~Go test generation integration~~ → **DONE**
+**Next steps:**
+- All phases complete — no immediate next step. Awaiting Sean direction.
+- The lobster workflow can be wired into a cron or run manually via `openclaw lobster run scripts/flows/repo_transmute_heartbeat.lobster`
