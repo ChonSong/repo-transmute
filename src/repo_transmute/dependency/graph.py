@@ -47,6 +47,12 @@ GO_IMPORT_REGEXES = [
 ]
 
 
+# Rust: use statements
+RUST_USE_REGEXES = [
+    # use path::to::module;
+    re.compile(r"^use\s+([^;]+);", re.MULTILINE),
+]
+
 def parse_imports(file_path: Path, language: Optional[str] = None) -> List[str]:
     """Parse import statements from a source file.
 
@@ -78,6 +84,8 @@ def parse_imports(file_path: Path, language: Optional[str] = None) -> List[str]:
         imports.extend(_parse_go_imports(content))
     elif language == "python":
         imports.extend(_parse_python_imports(content))
+    elif language == "rust":
+        imports.extend(_parse_rust_use(content))
     else:
         # JavaScript / TypeScript (default)
         for pattern in JS_TS_IMPORT_REGEXES:
@@ -97,6 +105,7 @@ def _infer_language(file_path: Path) -> str:
         ".jsx": "javascript",
         ".py": "python",
         ".go": "go",
+        ".rs": "rust",
     }
     return mapping.get(ext, "javascript")
 
@@ -406,3 +415,117 @@ class ProcessQueue:
             {"repo": r[0], "priority": r[1], "status": r[2], "created_at": r[3]}
             for r in rows
         ]
+
+
+def _parse_rust_use(content: str) -> List[str]:
+    """Parse Rust use statements.
+
+    Handles:
+      - use std::fs;           -> ["std::fs"]
+      - use crate::parser;     -> ["crate::parser"]
+      - use serde::{Serialize, Deserialize};  -> ["serde::Serialize", "serde::Deserialize"]
+      - use std::collections::{HashMap, BTreeMap}; -> ["std::collections::HashMap", ...]
+      - use super::module;     -> ["super::module"]
+    """
+    imports = []
+    for pattern in RUST_USE_REGEXES:
+        for match in pattern.finditer(content):
+            raw = match.group(1).strip()
+            # Expand grouped imports: path::{a, b, c} -> path::a, path::b, path::c
+            if '{' in raw:
+                base_part, rest = raw.split('{', 1)
+                base_part = base_part.rstrip(':').strip()
+                items = rest.rstrip('}').split(',')
+                for item in items:
+                    item = item.strip()
+                    if item:
+                        imports.append(f"{base_part}::{item}")
+            else:
+                imports.append(raw)
+    return imports
+
+
+def parse_cargo_toml(cargo_toml_path: Path) -> Dict[str, List[str]]:
+    """Parse Cargo.toml to extract Rust dependencies.
+
+    Returns:
+        Dict with keys 'dependencies' and 'dev-dependencies', each containing
+        a list of crate names.
+    """
+    deps: Dict[str, List[str]] = {"dependencies": [], "dev-dependencies": []}
+    try:
+        content = cargo_toml_path.read_text(encoding="utf-8")
+    except (FileNotFoundError, OSError):
+        return deps
+
+    current_section = None
+    for line in content.splitlines():
+        stripped = line.strip()
+        # Section headers
+        if stripped.startswith("["):
+            section = stripped.strip("[]").strip()
+            if section == "dependencies":
+                current_section = "dependencies"
+            elif section == "dev-dependencies":
+                current_section = "dev-dependencies"
+            else:
+                current_section = None
+            continue
+        # Dependency lines: name = "version" or name = { version = "..." }
+        if current_section and "=" in stripped:
+            name = stripped.split("=", 1)[0].strip()
+            if name and not name.startswith("#"):
+                # Handle workspace deps: serde.workspace = true -> serde
+                if name.endswith(".workspace"):
+                    name = name[:-len(".workspace")]
+                deps[current_section].append(name)
+
+    return deps
+
+
+def parse_go_mod(go_mod_path: Path) -> Dict[str, List[str]]:
+    """Parse go.mod to extract Go module dependencies.
+
+    Returns:
+        Dict with keys 'module' (module path), 'go' (Go version),
+        'require' (direct deps), and 'indirect' (indirect deps).
+    """
+    result: Dict[str, List[str]] = {
+        "module": [],
+        "go": [],
+        "require": [],
+        "indirect": [],
+    }
+    try:
+        content = go_mod_path.read_text(encoding="utf-8")
+    except (FileNotFoundError, OSError):
+        return result
+
+    in_require_block = False
+    for line in content.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("module "):
+            result["module"] = [stripped.split(None, 1)[1].strip('"')]
+        elif stripped.startswith("go "):
+            result["go"] = [stripped.split(None, 1)[1].strip('"')]
+        elif stripped == "require (":
+            in_require_block = True
+            continue
+        elif stripped == ")" and in_require_block:
+            in_require_block = False
+            continue
+        elif in_require_block and stripped and not stripped.startswith("//"):
+            parts = stripped.split()
+            if len(parts) >= 2:
+                is_indirect = "// indirect" in stripped
+                if is_indirect:
+                    result["indirect"].append(parts[0])
+                else:
+                    result["require"].append(parts[0])
+        elif stripped.startswith("require "):
+            # Single-line require: require foo v1.0.0
+            parts = stripped.split()
+            if len(parts) >= 3:
+                result["require"].append(parts[1])
+
+    return result
