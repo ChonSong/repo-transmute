@@ -962,19 +962,12 @@ class TestPipelineWithJsTsAndRust:
             """)
             reassembler.add_transpiled(chunk.id, rust_code, file_paths=chunk.files)
 
-        # Write output (reassembler writes .rs to root; cargo needs src/output.rs)
+        # Write output using src_dir="src" so cargo finds files at src/math.rs
         output_dir = tmp_path / "output"
-        src_dir = output_dir / "src"
-        src_dir.mkdir(parents=True)
-        written = reassembler.write_files(output_dir=output_dir, file_ext="rs")
+        output_dir.mkdir(parents=True)
+        # With src_dir="src", bare-filename markers like "math.rs" go to src/math.rs
+        written = reassembler.write_files(output_dir=output_dir, file_ext="rs", src_dir="src")
         assert len(written) > 0
-        # Move transpiled files to src/ so cargo finds them
-        # Files may have .ts extension (from source file inference) — rename to .rs
-        for wp in list(written.values()):
-            dest = src_dir / wp.name
-            if dest.suffix != ".rs":
-                dest = src_dir / (wp.stem + ".rs")
-            wp.rename(dest)
 
         # Cargo.toml: must declare [[bin]] target so cargo finds src/math.rs
         (output_dir / "Cargo.toml").write_text(textwrap.dedent("""

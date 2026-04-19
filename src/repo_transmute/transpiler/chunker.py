@@ -573,7 +573,7 @@ class Reassembler:
         """Count '// filename:' lines in code (case-insensitive)."""
         return len(re.findall(r"(?i)^//\s*filename\s*:\s*\S+", code, re.MULTILINE))
 
-    def _build_per_file_units(self, code: str, chunk_files: List[Path]) -> str:
+    def _build_per_file_units(self, code: str, chunk_files: List[Path], file_ext: str = "ts") -> str:
         """Normalise LLM multi-file output into properly delimited per-file units.
 
         The LLM may return multi-file output in one of two forms:
@@ -624,7 +624,7 @@ class Reassembler:
                         ext = rel.suffix
                         ts_ext = (".ts" if ext in (".py", ".pyw")
                                   else ext if ext in (".ts", ".tsx", ".js", ".jsx")
-                                  else ".ts")
+                                  else f".{file_ext}")
                         units.append(f"// filename: {rel.with_suffix(ts_ext)}\n{part.lstrip()}")
                     else:
                         units.append(part.lstrip())
@@ -657,7 +657,7 @@ class Reassembler:
                         ext = rel.suffix
                         ts_ext = (".ts" if ext in (".py", ".pyw")
                                   else ext if ext in (".ts", ".tsx", ".js", ".jsx")
-                                  else ".ts")
+                                  else f".{file_ext}")
                         marker = f"// filename: {rel.with_suffix(ts_ext)}"
                     else:
                         marker = None
@@ -679,7 +679,7 @@ class Reassembler:
             ext = rel.suffix
             ts_ext = (".ts" if ext in (".py", ".pyw")
                       else ext if ext in (".ts", ".tsx", ".js", ".jsx")
-                      else ".ts")
+                      else f".{file_ext}")
             marker = f"// filename: {rel.with_suffix(ts_ext)}"
             # Strip any existing LLM chunk-level marker and prepend ours
             code_stripped = re.sub(r"(?i)^//\s*filename\s*:\s*[^\n]+\n?", "", code, count=1).lstrip()
@@ -687,7 +687,7 @@ class Reassembler:
 
         return code
 
-    def combine(self) -> str:
+    def combine(self, file_ext: str = "ts") -> str:
         """Combine all transpiled chunks into a single text, with per-file
         // filename: markers and ---FILE_SEPARATOR--- between units."""
         if not self.transpiled:
@@ -697,7 +697,7 @@ class Reassembler:
         for chunk_id in sorted_ids:
             code = self.transpiled.get(chunk_id, "")
             if chunk_id in self._chunk_file_paths:
-                normalized = self._build_per_file_units(code, self._chunk_file_paths[chunk_id])
+                normalized = self._build_per_file_units(code, self._chunk_file_paths[chunk_id], file_ext)
                 parts.append(normalized)
             else:
                 parts.append(code)
@@ -749,18 +749,18 @@ class Reassembler:
                     file_units.append((None, piece))
         return file_units
 
-    def write_files(self, output_dir: Path, file_ext: str = "ts") -> Dict[str, Path]:
+    def write_files(self, output_dir: Path, file_ext: str = "ts", src_dir: Optional[str] = None) -> Dict[str, Path]:
         """Write transpiled units to individual files.
 
         Each unit is written to a file. If the unit has a // filename: marker
-        the file is placed at that path; otherwise the file is named after its
-        first top-level function or class. Units with no recognisable declaration
+        the file is placed at that path (under ``src_dir`` if provided);
+        otherwise the file is named after its first top-level function or class. Units with no recognisable declaration
         are skipped; when ALL units are skipped the combined output is written to
         ``combined_output.<ext>``.
         """
         if not self.transpiled:
             return {}
-        combined = self.combine()
+        combined = self.combine(file_ext=file_ext)
         file_units = self._split_into_file_units(combined)
         if output_dir is None:
             return {}
@@ -771,6 +771,12 @@ class Reassembler:
             # If the unit has an explicit // filename: marker, use that path
             if filename:
                 rel_path = filename.lstrip("/")
+                # If rel_path is a bare filename (no path separator), and src_dir is set,
+                # place it under src_dir/.  This allows callers to redirect bare
+                # output names (e.g. "math.rs") into a subdirectory (e.g. "src/")
+                # without affecting multi-level paths from the LLM.
+                if src_dir and "/" not in rel_path and "\\" not in rel_path:
+                    rel_path = f"{src_dir}/{rel_path}"
                 out_path = output_dir / rel_path
                 out_path.parent.mkdir(parents=True, exist_ok=True)
                 out_path.write_text(code.strip() + "\n")
@@ -789,16 +795,17 @@ class Reassembler:
                 # combined_output fallback below handles genuinely unplaceable content.
                 continue
 
-            rel_path = f"generated/{name}.{file_ext}".lstrip("/")
+            rel_path = f"{src_dir or 'generated'}/{name}.{file_ext}".lstrip("/")
             out_path = output_dir / rel_path
             out_path.parent.mkdir(parents=True, exist_ok=True)
             out_path.write_text(code.strip() + "\n")
             written[rel_path] = out_path
 
         if not written and combined.strip():
-            out_path = output_dir / f"combined_output.{file_ext}"
+            sub = f"{src_dir}/" if src_dir else ""
+            out_path = output_dir / f"{sub}combined_output.{file_ext}"
             out_path.write_text(combined.strip() + "\n")
-            written[f"combined_output.{file_ext}"] = out_path
+            written[f"{sub}combined_output.{file_ext}"] = out_path
 
         return written
 
