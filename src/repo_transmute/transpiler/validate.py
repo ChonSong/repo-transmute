@@ -287,8 +287,13 @@ def _parse_pytest_output(output: str) -> SuiteResult:
 
 
 def _parse_jest_output(output: str) -> SuiteResult:
-    """Parse Jest/Vitest JSON output (or text fallback)."""
-    # Try JSON first
+    """Parse Jest/Vitest JSON output (or text fallback).
+
+    Handles multiple output formats:
+    - Jest JSON: {"numPassingTests": N, "numFailingTests": M}
+    - Vitest v4 text: "Tests  N passed (N)" or "Tests  N failed | M passed (N)"
+    """
+    # Try JSON first (Jest's --json reporter format)
     try:
         match = re.search(r'\{[^}]*"numPassingTests"[^}]*\}', output)
         if match:
@@ -299,9 +304,11 @@ def _parse_jest_output(output: str) -> SuiteResult:
     except (json.JSONDecodeError, AttributeError):
         pass
 
-    # Text fallback
-    passed_m = re.search(r"Tests:\s*(\d+) passed", output)
-    failed_m = re.search(r"(\d+) failed", output)
+    # Text fallback — Vitest v4 verbose output format:
+    # "Tests  N passed" or "Tests  N failed | M passed" on a single line
+    # Also handles: "Test Files  N passed (N)" followed by "Tests  M passed (M)"
+    passed_m = re.search(r'Tests\b[^\n]*?(\d+)\s+passed', output)
+    failed_m = re.search(r'Tests\b[^\n]*?(\d+)\s+failed', output)
     passed = int(passed_m.group(1)) if passed_m else 0
     failed = int(failed_m.group(1)) if failed_m else 0
     return SuiteResult(success=failed == 0, passed=passed, failed=failed, output=output)
@@ -464,7 +471,7 @@ def _run_rust_tests(
     if not (project_root / "Cargo.toml").exists():
         return SuiteResult(success=False, error="No Cargo.toml found in project root")
 
-    cmd = ["cargo", "test", "--", "--report-time"]
+    cmd = ["cargo", "test"]
 
     try:
         result = subprocess.run(
@@ -472,10 +479,21 @@ def _run_rust_tests(
         )
         output = result.stdout + result.stderr
 
-        ok_lines = re.findall(r"^test result: ok", output, re.MULTILINE)
-        fail_lines = re.findall(r"^FAILED.*", output, re.MULTILINE)
-        passed = len(ok_lines)
-        failed = len(fail_lines)
+        # Extract actual test counts from cargo output
+        # Format: "test result: ok. N passed; M failed; ..."
+        # or: "test result: FAILED. N passed; M failed; ..."
+        # Note: FAILED lines also report passed count (tests that passed before failure)
+        passed = 0
+        failed = 0
+        for line in output.splitlines():
+            m = re.search(r"test result: (?:ok|FAILED)\. (\d+) passed", line)
+            if m:
+                n = int(m.group(1))
+                passed += n
+            # Also extract failed count from FAILED lines
+            fm = re.search(r"test result: FAILED\. (?:\d+) passed; (\d+) failed", line)
+            if fm:
+                failed += int(fm.group(1))
         success = result.returncode == 0
 
         return SuiteResult(
