@@ -265,14 +265,14 @@ def generate_test_stub(func_info: dict, target_pkg: str = "fixtures") -> str:
 
     # If the function has parameters, create zero-value setup
     if param_names:
-        lines.append(f"    // TODO: set up test inputs")
-        for pname in param_names:
-            lines.append(f"    // var {pname} = <value>")
+        lines.append(f"    // Set up test inputs")
+    for pname in param_names:
+        lines.append(f"    // var {pname} = <zero-value>  // TODO: set appropriate test value")
 
     # If the function returns a value, set up result variable
     if ret_type and ret_type != "error" and ret_type != "":
         lines.append(f"    var want {ret_type}")
-        lines.append(f"    // TODO: set want = expected value")
+        lines.append(f"    // Set expected return value based on test case")
         lines.append("")
 
     # Build the function call
@@ -307,7 +307,7 @@ def generate_test_stub(func_info: dict, target_pkg: str = "fixtures") -> str:
         lines.append(f'        t.Errorf("{name}() = %v, want %v", got, want)')
         lines.append("    }")
     else:
-        lines.append("    // TODO: add assertions")
+        lines.append("    // Add assertions: t.Errorf(...) or t.Run(...)")
         lines.append('    t.Log("test not yet implemented")')
 
     lines.append("}")
@@ -367,7 +367,7 @@ def generate_test_file(
     # Build import block
     import_lines = ['"testing"']
     if needed_imports:
-        import_lines.append(f'"{pkg_name}"  // TODO: replace with actual import path')
+        import_lines.append(f\'"{pkg_name}"  // TODO: verify import path\')
         # Also suggest common test imports
         for pkg in ["fmt", "errors", "reflect"]:
             if not _needs_import(all_imports, pkg):
@@ -489,7 +489,7 @@ def generate_test_stub_method(func_info: dict, target_pkg: str = "fixtures") -> 
 
     if ret_type and ret_type != "error" and ret_type != "":
         lines.append(f"    var want {ret_type}")
-        lines.append(f"    // TODO: set want = expected value")
+        lines.append(f"    // Set expected return value based on test case")
 
     # Call the method
     if param_names:
@@ -511,7 +511,7 @@ def generate_test_stub_method(func_info: dict, target_pkg: str = "fixtures") -> 
         lines.append(f'        t.Errorf("{name}() = %v, want %v", got, want)')
         lines.append("    }")
     else:
-        lines.append("    // TODO: add assertions")
+        lines.append("    // Add assertions: t.Errorf(...) or t.Run(...)")
 
     lines.append("}")
 

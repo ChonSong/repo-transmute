@@ -3,7 +3,7 @@
 ## System Status
 
 - **TXTAI Index**: ✅ Built (12,181 docs, 11 repos)
-- **Pipeline**: ✅ Working (620 tests pass)
+- **Pipeline**: ✅ Working (652 tests pass)
 - **Nightly cron**: ✅ Active (runs ~6:30 UTC each night)
 
 ## No active priorities — awaiting Sean direction
@@ -12,51 +12,38 @@ The system is in good working order. All phases are complete.
 
 ## Recent Work
 
-- **2026-04-14 Night Owl**: Multi-language chunker — Go, JS/TS, Rust support in `chunk_repository()`, `create_chunks()`, `count_functions()`, `extract_imports()`, `extract_exports()`. Fixed bug where CLI and coordinator always defaulted to Python. Added TypeScript interface/type export detection. 42 new tests. Also: Rust dependency parsing — `parse_cargo_toml()`, `parse_go_mod()`, `_parse_rust_use()`, Rust dispatch in `parse_imports()`. 20 new tests. (Commits `7cb0729`, `9e7a901`)
+- **2026-04-22 Night Owl**: Documentation update — ROADMAP.md refreshed to reflect current system status (all phases 1-8 complete). Multi-language support (Python, JS/TS, Rust, Go) and runtime test execution confirmed working. System verification complete — all 652 tests pass.
 
-- **2026-04-12 Night Owl**: Implemented cross-chunk context — LLM now sees exports from prior chunks when transpiling (commit `78df5b7`). When transpiling chunk N, the pipeline accumulates exports from chunks 0..N-1 and embeds them in the prompt, enabling correct import generation and preventing duplicate definitions. 11 new tests.
+- **2026-04-19 Night Owl**: Reassembler `write_files()` improvements:
+  1. **file_ext propagation through `combine()`**: `_build_per_file_units()` was defaulting to `.ts` for any unrecognized source extension (Go `.go`, Rust `.rs`), so Go→Rust produced `math.ts` instead of `math.rs`. Now `combine(file_ext)` passes the target extension down so correct extensions are used throughout.
+  2. **`src_dir` parameter for `write_files()`**: Allows redirecting bare-filename output (e.g. `math.rs`) into a subdirectory (e.g. `src/math.rs`) — critical for Rust/cargo projects that require output under `src/`. Previously required manual file moving after `write_files()` returned.
+  - Updated `test_pipeline_rust_with_cargo_test_e2e` to use `src_dir="src"` instead of manual post-processing.
+  - 652 tests pass. Commit `11940f6`.
 
-- **2026-04-12 Night Owl**: Integrated `go_test_gen.py` AST-aware test generation into pipeline coordinator (commit `beb8c54`). Replaced basic regex-based Go test generation with proper AST parsing. Falls back to regex on parse errors. 4 new tests.
+- **2026-04-19 Night Owl**: End-to-end test execution — `run_tests()` now verified with real Vitest (JS/TS) and Cargo test runners. Fixed Vitest v4 output parsing (`Tests  N passed` format). Fixed JS test string formatting (Python `.format()` brace escaping). Fixed pipeline Rust test path (`file_ext="rs"` → `[[bin]]` target). Added 8 new e2e tests (3 JS/Vitest + 3 Rust/Cargo + 2 pipeline). 652 total tests pass. (Commit `2e3f8a1`)
 
-- **2026-04-11 Night Owl**: Fixed cross-chunk dependency detection in `create_chunks()` (commit `f64aa89`). Imports were stored as qualified dotted paths (`pkg.mod.Symbol`) while exports are bare names (`Symbol`), so the direct membership check never matched. Added `_symbol_from_qualified_import()` helper that strips the leading prefix and filters stdlib imports. 543 tests pass (up from 541).
+- **2026-04-14 Night Owl**: Multi-language chunker — Go, JS/TS, Rust support. Fixed CLI/coordinator bug (always defaulting to Python). Rust/Go dependency parsing (Cargo.toml, go.mod). 62 new tests. (Commits `7cb0729`, `9e7a901`)
 
-- **2026-04-11 (Night Owl)**: ClawFlow orchestration — RepoTransmute heartbeat lobster workflow implemented (Phase 7 complete)
+- **2026-04-12 Night Owl**: Cross-chunk context (LLM sees prior exports) + Go AST-aware test generation. 15 new tests.
+
+- **2026-04-11 Night Owl**: Fixed cross-chunk dependency detection. ClawFlow orchestration (Phase 7).
 
 ## Phase 8 — TXTAI Hybrid Search (DONE)
 
 Implemented as `TxtaiClient.hybrid_search()` + `BlueprintSearch.hybrid_search()`:
-
-- **BM25 keyword scoring** via `_bm25_score()` — pure Python, reads text from SQLite sidecar
-- **Semantic vector search** via existing txtai embeddings
-- **Min-max normalisation** of both score components before fusion
-- **Weighted sum** with configurable `semantic_weight` (default 0.7) / `keyword_weight` (default 0.3)
-- `semantic_limit=100` to get more candidates than final limit (improves keyword recall)
-- Result dict carries `semantic_score` and `keyword_score` alongside fused `score`
+- BM25 keyword scoring via `_bm25_score()` — pure Python, reads from SQLite sidecar
+- Semantic vector search via txtai embeddings
+- Min-max normalisation + weighted sum fusion
+- Configurable `semantic_weight` (default 0.7) / `keyword_weight` (default 0.3)
 
 ## Phase 7 — ClawFlow Orchestration (DONE 2026-04-11)
 
 Lobster workflow at `scripts/flows/repo_transmute_heartbeat.lobster`.
 
-## Multi-Language Chunker Support (2026-04-14)
+## Next Possible Directions (when Sean provides direction)
 
-The chunker now supports Go, JavaScript/TypeScript, and Rust in addition to Python:
-- `LANG_EXTENSIONS` mapping and `IGNORE_DIRS` for file discovery
-- Language-aware `count_functions()`, `extract_imports()`, `extract_exports()` dispatchers
-- `_find_source_files()` with proper filtering (excludes Go test files, hidden dirs, etc.)
-- `chunk_repository()` and `create_chunks()` accept `language` parameter
-- CLI and coordinator pass detected language through to chunking
-
-## Dependency Parsing (2026-04-14)
-
-- Rust `use` statement parsing with grouped import expansion (`{A, B, C}`)
-- `parse_cargo_toml()` for Rust dependency extraction
-- `parse_go_mod()` for Go module dependency extraction
-- `parse_imports()` dispatches to Rust handler for `.rs` files
-
-## Open Items
-
-1. **Runtime test execution**: `run_tests()` is implemented and has unit tests, but has not been verified end-to-end with a real transpiled project
-2. ~~**Cross-chunk context**:~~ → **DONE 2026-04-12**
-3. ~~**Go test generation**:~~ → **DONE 2026-04-12**
-4. ~~**Multi-language chunker**:~~ → **DONE 2026-04-14**
-5. ~~**Cargo.toml/go.mod dependency parsing**:~~ → **DONE 2026-04-14**
+1. **Performance optimization** - Large file processing could be optimized
+2. **Additional language support** - Java, Ruby, PHP
+3. **Enhanced error reporting** - Better diagnostics for transpilation failures
+4. **UI/UX improvements** - Better CLI output, progress indicators
+5. **Integration testing** - More complex real-world repository tests

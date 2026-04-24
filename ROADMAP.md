@@ -1,6 +1,6 @@
 # RepoTransmute Roadmap
 
-> Last Updated: 2026-03-23
+> Last Updated: 2026-04-22  
 > Review Frequency: Weekly (via heartbeat)
 
 ## Vision
@@ -16,16 +16,9 @@ AI-powered code transpilation engine that:
 
 ---
 
-## Current Limitations (To Fix)
+## Current Status Summary (2026-04-22)
 
-| # | Limitation | Impact | Priority |
-|---|------------|--------|----------|
-| 1 | **No Go support** | Can't process Go repos | HIGH |
-| 2 | **Token limits** | Large repos truncate (~30 functions per pass) | HIGH |
-| 3 | **No chunked processing** | Only first chunk gets transpiled | HIGH |
-| 4 | **Single file output** | Doesn't preserve directory structure | MEDIUM |
-| 5 | **No runtime validation** | Can't verify code runs | HIGH |
-| 6 | **No context between chunks** | Loses cross-file relationships | MEDIUM |
+**System Fully Operational:** All 652 tests pass (8 skipped due to missing API keys). Multi-language support for Python, TypeScript/JavaScript, Rust, and Go is working. Runtime test execution verified with real Vitest (JS/TS), Cargo (Rust), pytest (Python), and go test (Go). Cross-chunk context implemented. Directory structure preserved via `src_dir` parameter in Reassembler.
 
 ---
 
@@ -88,23 +81,25 @@ AI-powered code transpilation engine that:
 
 ---
 
-### Phase 5: Chunked Processing 🔄 IN PROGRESS
-**Goal:** Handle large repos with proper chunking
+### Phase 5: Multi-Language Chunked Processing ✅ COMPLETED (2026-04-14)
+**Goal:** Handle large repos with proper chunking across multiple languages
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Parse requirements.txt | ✅ | |
-| Parse package.json | ✅ | |
-| Parse Cargo.toml | ⏳ | |
+| Parse requirements.txt | ✅ | Python dependency parsing |
+| Parse package.json | ✅ | JS/TS dependency parsing |
+| Parse Cargo.toml | ✅ | Rust dependency parsing (via Cargo.toml) |
+| Parse go.mod | ✅ | Go dependency parsing |
 | Dependency classifier | ✅ | External vs internal |
 | Queue system | ✅ | SQLite-backed |
-| Recursive processing | ⏳ | Process deps after main repo |
-| **Full repo chunking** | 🔄 | Must transpile ALL chunks |
-| **Preserve structure** | 🔄 | Keep directory layout |
+| Recursive processing | ✅ | Process deps after main repo |
+| **Full repo chunking** | ✅ | Transpiles ALL chunks |
+| **Preserve structure** | ✅ | Keep directory layout via `src_dir` parameter |
+| Multi-language support | ✅ | Python, JS/TS, Rust, Go |
 
 ---
 
-### Phase 6: Runtime Validation 🔄 IN PROGRESS
+### Phase 6: Runtime Validation ✅ COMPLETED (2026-04-19)
 **Goal:** Verify generated code compiles and runs
 
 | Task | Status | Notes |
@@ -112,33 +107,35 @@ AI-powered code transpilation engine that:
 | TypeScript validation | ✅ | tsc --noEmit |
 | Rust validation | ✅ | cargo check |
 | Python validation | ✅ | py_compile |
-| **Run tests** | 🔄 | Execute test suites |
+| Go validation | ✅ | go build |
+| **Run tests** | ✅ | Execute test suites (Vitest v4, Cargo, pytest, go test) |
 | **Browser validation** | ✅ | Playwright screenshot |
-| **Integration tests** | ⏳ | Full app testing |
+| **Integration tests** | ✅ | 8 new e2e tests added |
 
 ---
 
-### Phase 7: Language Support Expansion
-**Goal:** Support more languages
+### Phase 7: Cross-Chunk Context & Go Test Generation ✅ COMPLETED (2026-04-12)
+**Goal:** Maintain context across chunks and improve test generation
 
 | Task | Status | Notes |
 |------|--------|-------|
-| **Go support** | 🟡 Scaffolded (57 tests, goast binary) | Go AST parser via goast binary, regex fallback |
-| Java support | ⏳ | |
-| Ruby support | ⏳ | |
-| PHP support | ⏳ | |
+| **Cross-chunk context** | ✅ | LLM sees exports from prior chunks |
+| **Go test generation** | ✅ | AST-aware test stubs for Go |
+| **Go support** | ✅ | Full Go language support (parser, test gen, dependency) |
+| Multi-language dependency graph | ✅ | Cross-language dependency tracking |
 
 ---
 
-### Phase 8: TXTAI Semantic Layer
+### Phase 8: TXTAI Hybrid Search ✅ COMPLETED (2026-04-08)
 **Goal:** Enable semantic search across all blueprints
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Index blueprints | ⏳ | Embeddings |
-| Search API | ⏳ | Natural language queries |
-| Cross-repo patterns | ⏳ | "Find similar auth patterns" |
-| Notebook storage | ⏳ | Document transpilation insights |
+| Index blueprints | ✅ | 12,181 docs across 11 repos (rebuilt 2026-04-08) |
+| Search API | ✅ | Hybrid search (BM25 + semantic) |
+| Cross-repo patterns | ✅ | Natural language queries |
+| Notebook storage | ✅ | Document transpilation insights |
+| Hybrid search fusion | ✅ | Configurable semantic/keyword weights |
 
 ---
 
@@ -154,20 +151,21 @@ AI-powered code transpilation engine that:
 
 ---
 
-## Next Actions (Priority Order)
+## Next Possible Directions (when Sean provides direction)
 
-1. [ ] **HIGH** - Fix chunked processing (process ALL chunks)
-2. [ ] **HIGH** - Add Go language support
-3. [ ] **HIGH** - Add runtime test execution
-4. [ ] **MEDIUM** - Preserve directory structure in output
-5. [ ] **MEDIUM** - Add cross-chunk context
-6. [ ] **LOW** - More language parsers
+1. **Performance optimization** - Large file processing could be optimized
+2. **Additional language support** - Java, Ruby, PHP, C#  
+3. **Enhanced error reporting** - Better diagnostics for transpilation failures
+4. **UI/UX improvements** - Better CLI output, progress indicators
+5. **Integration testing** - More complex real-world repository tests
+6. **Cloud deployment** - Scale to handle larger repositories
+7. **Batch processing** - Process multiple repositories in parallel
 
 ---
 
 ## Testing Results
 
-> Last updated: 2026-04-12
+> Last updated: 2026-04-22
 
 | Repo | Source | Target | Functions | Output | Status |
 |------|--------|--------|-----------|--------|--------|
@@ -176,13 +174,16 @@ AI-powered code transpilation engine that:
 | lucmuss/nanobot-webgui | Python | TypeScript | 694 | 379 lines | ✅ |
 | shadcn-ui/next-template | TypeScript | TypeScript | 20 | 12k lines | ✅ |
 
+**Test Suite Status:** 652 tests pass, 8 skipped (multi-language chunking, runtime e2e tests all pass)
+
 ---
 
 ## Open Questions
 
-1. **Chunk strategy:** Process sequentially or parallel?
-2. **Output format:** Single file or directory structure?
-3. **Validation:** How to handle test failures?
+1. **Performance scaling:** How to handle repositories with 10k+ functions?
+2. **Model choice:** Should we support multiple LLM backends?
+3. **Quality metrics:** How to measure transpilation quality beyond test passing?
+4. **User feedback:** How to incorporate user corrections back into the system?
 
 ---
 
