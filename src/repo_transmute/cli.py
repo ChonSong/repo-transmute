@@ -409,3 +409,157 @@ def status():
 
 if __name__ == "__main__":
     cli()
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Frontend Migration Commands
+# ═══════════════════════════════════════════════════════════════════
+
+@cli.command()
+@click.argument("source_path", type=click.Path(path_type=Path))
+@click.option("--output-dir", "-o", type=click.Path(path_type=Path), default=Path("./data/frontend"), help="Output directory for frontend blueprint")
+def frontend_blueprint(source_path: Path, output_dir: Path):
+    """Extract frontend blueprint from a project (components, routes, CSS, APIs)."""
+    from repo_transmute.frontend import extract_frontend_blueprint
+    
+    if not source_path.exists():
+        click.echo(f"Error: {source_path} does not exist", err=True)
+        return
+    
+    click.echo(f"Extracting frontend blueprint from {source_path}...")
+    blueprint = extract_frontend_blueprint(source_path)
+    
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_file = output_dir / "frontend_blueprint.yaml"
+    output_file.write_text(yaml.dump(blueprint, default_flow_style=False, sort_keys=False))
+    
+    click.echo(f"Frontend blueprint saved to {output_file}")
+    click.echo(f"  Components: {blueprint['summary']['total_components']}")
+    click.echo(f"  Routes: {blueprint['summary']['total_routes']}")
+    click.echo(f"  CSS files with themes: {blueprint['summary']['total_css_files']}")
+    click.echo(f"  API patterns: {blueprint['summary']['total_api_patterns']}")
+
+
+@cli.command()
+@click.argument("source_path", type=click.Path(path_type=Path))
+@click.option("--target-path", "-t", type=click.Path(path_type=Path), default=None, help="Path to target project for comparison")
+def theme_analysis(source_path: Path, target_path: Path | None):
+    """Analyze theme system compatibility between source and target projects."""
+    from repo_transmute.frontend import extract_css_theme_system, map_theme_compatibility
+    
+    click.echo(f"Analyzing source theme system: {source_path}")
+    source_system = extract_css_theme_system(source_path)
+    
+    click.echo(f"  Approach: {source_system.theme_approach}")
+    click.echo(f"  Themes: {len(source_system.themes)}")
+    click.echo(f"  CSS variables: {len(source_system.css_variables)}")
+    click.echo(f"  Utility classes: {len(source_system.global_utilities)}")
+    
+    if target_path:
+        click.echo(f"\nAnalyzing target theme system: {target_path}")
+        target_system = extract_css_theme_system(target_path)
+        
+        click.echo(f"  Approach: {target_system.theme_approach}")
+        click.echo(f"  Themes: {len(target_system.themes)}")
+        
+        compat = map_theme_compatibility(source_system, target_system)
+        click.echo(f"\nCompatibility: {compat['compatibility_score']:.0%}")
+        click.echo(f"  Common variables: {len(compat['common_variables'])}")
+        click.echo(f"  Source-only: {len(compat['source_only_variables'])}")
+        click.echo(f"  Target-only: {len(compat['target_only_variables'])}")
+        click.echo(f"\n  {compat['recommendation']}")
+
+
+@cli.command()
+@click.argument("source_path", type=click.Path(path_type=Path))
+@click.option("--target-path", "-t", type=click.Path(path_type=Path), default=None, help="Path to target project")
+@click.option("--output", "-o", type=click.Path(path_type=Path), default=Path("./data/api_mapping.yaml"))
+def api_analysis(source_path: Path, target_path: Path | None, output: Path):
+    """Analyze API call patterns and generate migration blueprint."""
+    from repo_transmute.frontend import generate_api_migration_blueprint
+    
+    click.echo(f"Analyzing API calls in {source_path}...")
+    blueprint = generate_api_migration_blueprint(source_path, target_path)
+    
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(yaml.dump(blueprint, default_flow_style=False, sort_keys=False))
+    
+    click.echo(f"API migration blueprint saved to {output}")
+    click.echo(f"  Source APIs: {blueprint['source_api_count']}")
+    click.echo(f"  Target APIs: {blueprint['target_api_count']}")
+    click.echo(f"  Rewrite rules: {len(blueprint['rewrite_rules'])}")
+    click.echo(f"  Streaming APIs: {len(blueprint['streaming_apis'])}")
+    click.echo(f"\n  {blueprint['recommendation']}")
+
+
+@cli.command()
+@click.argument("source_path", type=click.Path(path_type=Path))
+@click.argument("target_path", type=click.Path(path_type=Path))
+@click.option("--output-dir", "-o", type=click.Path(path_type=Path), default=Path("./data/migrated"))
+@click.option("--framework", "-f", default="react", help="Source framework (react, next.js, etc.)")
+@click.option("--style", "-s", default="tailwind", help="Source CSS approach (tailwind, css-vars, etc.)")
+@click.option("--dry-run", is_flag=True, help="Show plan without executing")
+def frontend_migrate(source_path: Path, target_path: Path, output_dir: Path,
+                     framework: str, style: str, dry_run: bool):
+    """Run full frontend migration: components + themes + APIs."""
+    from repo_transmute.frontend import (
+        extract_frontend_blueprint,
+        extract_css_theme_system,
+        map_theme_compatibility,
+        generate_api_migration_blueprint,
+    )
+    from repo_transmute.transpiler.compatibility import check_frontend_compatibility
+    
+    click.echo("╔══════════════════════════════════════════════╗")
+    click.echo("║   Frontend Migration Analysis               ║")
+    click.echo("╚══════════════════════════════════════════════╝\n")
+    
+    # Step 1: Extract blueprints
+    click.echo("[1/4] Extracting source frontend blueprint...")
+    source_bp = extract_frontend_blueprint(source_path)
+    click.echo(f"  Found {source_bp['summary']['total_components']} components, {source_bp['summary']['total_routes']} routes")
+    
+    # Step 2: Theme analysis
+    click.echo("\n[2/4] Analyzing theme systems...")
+    source_css = extract_css_theme_system(source_path)
+    target_css = extract_css_theme_system(target_path)
+    theme_compat = map_theme_compatibility(source_css, target_css)
+    click.echo(f"  Compatibility: {theme_compat['compatibility_score']:.0%}")
+    click.echo(f"  {theme_compat['recommendation']}")
+    
+    # Step 3: API analysis
+    click.echo("\n[3/4] Analyzing API patterns...")
+    api_bp = generate_api_migration_blueprint(source_path, target_path)
+    click.echo(f"  {api_bp['recommendation']}")
+    
+    # Step 4: Compatibility check
+    click.echo("\n[4/4] Checking overall compatibility...")
+    compat = check_frontend_compatibility(
+        framework, style,
+        component_count=source_bp['summary']['total_components'],
+        has_ssr=False,
+    )
+    click.echo(f"  Confidence: {compat.confidence:.0%}")
+    click.echo(f"  Complexity: {compat.complexity_score}/10")
+    for w in compat.warnings:
+        click.echo(f"  ⚠ {w}")
+    
+    if dry_run:
+        click.echo("\n[Dry run — no files written]")
+        return
+    
+    # Save migration plan
+    output_dir.mkdir(parents=True, exist_ok=True)
+    plan = {
+        'source_blueprint': source_bp,
+        'theme_compatibility': theme_compat,
+        'api_migration': api_bp,
+        'compatibility': {
+            'confidence': compat.confidence,
+            'complexity': compat.complexity_score,
+            'warnings': compat.warnings,
+        },
+    }
+    plan_file = output_dir / "migration_plan.yaml"
+    plan_file.write_text(yaml.dump(plan, default_flow_style=False, sort_keys=False))
+    click.echo(f"\nMigration plan saved to {plan_file}")

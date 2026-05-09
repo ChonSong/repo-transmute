@@ -23,6 +23,8 @@ class TargetLanguage(Enum):
     PYTHON = "python"
     RUST = "rust"
     GO = "go"
+    REACT = "react"  # React/TSX component migration
+    CSS = "css"  # CSS/theme migration
 
 
 @dataclass
@@ -46,6 +48,19 @@ ROUTING_TABLE = {
     Language.PHP: (TargetLanguage.PYTHON, 0.5, "Major transformation - high risk"),
     Language.CSHARP: (TargetLanguage.RUST, 0.6, "Microsoft ecosystem to Rust"),
     Language.UNKNOWN: (None, 0.0, "Cannot determine source language"),
+}
+
+# Frontend migration routing table
+# (source_framework, source_style) -> (target, confidence, reason)
+FRONTEND_ROUTING_TABLE = {
+    ("react", "tailwind"): (TargetLanguage.REACT, 0.95, "React + Tailwind → React, direct migration"),
+    ("react", "css-vars"): (TargetLanguage.REACT, 0.90, "React + CSS vars → React, theme mapping needed"),
+    ("react", "styled-components"): (TargetLanguage.REACT, 0.85, "React + styled-components → React, style system change"),
+    ("react", "css-modules"): (TargetLanguage.REACT, 0.85, "React + CSS modules → React, style system change"),
+    ("next.js", "tailwind"): (TargetLanguage.REACT, 0.80, "Next.js → React SPA, SSR features lost"),
+    ("tanstack-start", "tailwind"): (TargetLanguage.REACT, 0.80, "TanStack Start → React SPA, SSR features lost"),
+    ("vue", "tailwind"): (TargetLanguage.REACT, 0.70, "Vue → React, paradigm shift needed"),
+    ("angular", "typescript"): (TargetLanguage.REACT, 0.60, "Angular → React, major paradigm shift"),
 }
 
 
@@ -218,3 +233,64 @@ def get_recommended_target(source_lang: str) -> Optional[str]:
         if recommended:
             return recommended.value
     return None
+
+
+def check_frontend_compatibility(
+    source_framework: str,
+    source_style: str,
+    target_framework: str = "react",
+    component_count: int = 0,
+    has_ssr: bool = False,
+) -> CompatibilityResult:
+    """Check frontend migration compatibility.
+    
+    Args:
+        source_framework: Source frontend framework (react, next.js, vue, etc.)
+        source_style: Source CSS approach (tailwind, css-vars, styled-components, etc.)
+        target_framework: Target framework (default: react)
+        component_count: Number of components to migrate
+        has_ssr: Whether source uses server-side rendering
+    
+    Returns:
+        CompatibilityResult with migration recommendation
+    """
+    warnings = []
+    key = (source_framework.lower(), source_style.lower())
+    
+    if key in FRONTEND_ROUTING_TABLE:
+        recommended, confidence, reason = FRONTEND_ROUTING_TABLE[key]
+        warnings.append(reason)
+    else:
+        # Default: assume React → React with style change
+        recommended = TargetLanguage.REACT
+        confidence = 0.75
+        warnings.append(
+            f"No specific routing for {source_framework}/{source_style}. "
+            f"Assuming React-to-React migration with style adaptation."
+        )
+    
+    # SSR warning
+    if has_ssr:
+        confidence -= 0.15
+        warnings.append(
+            "Source uses SSR — SSR-specific features will be lost in SPA migration. "
+            "Consider client-side data fetching patterns."
+        )
+    
+    # Complexity penalty
+    if component_count > 50:
+        confidence -= 0.2
+        warnings.append(f"High component count ({component_count}) — migration may be incomplete")
+    elif component_count > 20:
+        confidence -= 0.1
+        warnings.append(f"Medium component count ({component_count})")
+    
+    confidence = max(confidence, 0.0)
+    
+    return CompatibilityResult(
+        compatible=confidence >= 0.5,
+        recommended_target=recommended.value if recommended else None,
+        confidence=confidence,
+        warnings=warnings,
+        complexity_score=min(10, max(1, component_count // 5)),
+    )
