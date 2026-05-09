@@ -212,6 +212,27 @@ PYTHONPATH=src python3 -m repo_transmute.cli frontend_migrate /path/to/source /p
 | `transpiler/validate.py` | React/TSX validation (tsc + vite build + syntax check) |
 | `transpiler/compatibility.py` | Frontend routing table + compatibility checker |
 
+## Test Results
+
+### hermes-workspace → agent-os Migration (2026-05-09)
+
+| Metric | Value |
+|--------|-------|
+| Components extracted | 761 |
+| Themes extracted | 22 (11 dark + light pairs) |
+| API call patterns | 125 |
+| Rewrite rules generated | 125 |
+| Streaming APIs detected | 5 |
+| Migration confidence | 60% (SSR + high component count) |
+
+**Successfully migrated to agent-os:**
+- 11 themes via CSS variables + ThemeContext provider
+- Theme picker UI in Settings page
+- Terminal page (xterm.js + Docker exec PTY)
+- Memory page (file browser for agent memory)
+- Dashboard page (aggregated metrics)
+- Updated Sidebar navigation
+
 ## Known Issues
 
 - MiniMax returns thinking in content field — cleaned automatically
