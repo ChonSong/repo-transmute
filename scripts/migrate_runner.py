@@ -1,10 +1,15 @@
-"""Migration runner - migrates hermes-workspace components to agent-os format."""
+"""Migration runner - migrates hermes-workspace components to agent-os format.
+
+Uses local Hermes Agent gateway (port 8642) for LLM calls - no external API credits needed.
+"""
 
 import json
 import os
 import sys
 import re
 import time
+import subprocess
+import tempfile
 from pathlib import Path
 
 # Load .env
@@ -25,14 +30,13 @@ from repo_transmute.v2.models import (
 from repo_transmute.v2.ingest.detector import detect_framework
 
 
-def migrate_component_with_llm(comp, model='minimax/minimax-m2.7'):
-    """Generate migrated code using OpenRouter API."""
-    import httpx
+def migrate_component_with_llm(comp, model='MiniMax-M2.7'):
+    """Generate migrated code using local Hermes Agent gateway."""
     
     # Truncate very long components
     source_code = comp.full_source
-    if len(source_code) > 3000:
-        source_code = source_code[:3000] + '\n\n// ... (truncated for brevity)'
+    if len(source_code) > 4000:
+        source_code = source_code[:4000] + '\n\n// ... (truncated, full component available on request)'
     
     prompt = f"""You are an expert React/TypeScript developer migrating components from a TanStack Start + Tailwind codebase to a standard React SPA with Vite.
 
@@ -59,38 +63,45 @@ IMPORT CONVERSION RULES:
 - @tanstack imports -> react-router-dom or remove
 - electron imports -> remove
 - ~/ -> @/
+- @hugeicons/react -> lucide-react
+- @base-ui/react -> standalone React implementations
 - Keep Tailwind classes as-is
 
-Generate ONLY the migrated component code in a TypeScript code block."""
+Generate ONLY the migrated component code in a TypeScript code block. No explanations."""
 
-    api_key = os.environ.get('OPENROUTER_API_KEY', '')
+    # Write prompt to temp file and use curl via SSH
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        payload = {
+            'model': model,
+            'messages': [{'role': 'user', 'content': prompt}],
+            'temperature': 0.1,
+            'max_tokens': 6000,
+        }
+        json.dump(payload, f)
+        temp_file = f.name
     
     try:
-        response = httpx.post(
-            'https://openrouter.ai/api/v1/chat/completions',
-            headers={
-                'Authorization': f'Bearer {api_key}',
-                'Content-Type': 'application/json',
-                'HTTP-Referer': 'https://github.com/ChonSong/repo-transmute',
-                'X-Title': 'repo-transmute-v2',
-            },
-            json={
-                'model': model,
-                'messages': [{'role': 'user', 'content': prompt}],
-                'temperature': 0.1,
-                'max_tokens': 4000,
-            },
+        # SSH to host and call Hermes gateway
+        cmd = f"ssh -i /opt/data/container_key -o StrictHostKeyChecking=no sean@localhost 'curl -sf http://127.0.0.1:8642/v1/chat/completions -H \"Content-Type: application/json\" -d @-' < {temp_file}"
+        result = subprocess.run(
+            cmd,
+            shell=True,
+            capture_output=True,
+            text=True,
             timeout=120,
         )
-        if response.status_code == 200:
-            data = response.json()
-            return data.get('choices', [{}])[0].get('message', {}).get('content', '')
+        if result.returncode == 0:
+            data = json.loads(result.stdout)
+            content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+            return content
         else:
-            print(f'API error {response.status_code}: {response.text[:100]}', file=sys.stderr)
+            print(f'Hermes error {result.returncode}: {result.stderr[:100]}', file=sys.stderr)
             return ''
     except Exception as e:
         print(f'LLM failed: {e}', file=sys.stderr)
         return ''
+    finally:
+        os.unlink(temp_file)
 
 
 def extract_code(text):
@@ -109,6 +120,7 @@ def main():
     
     framework, style = detect_framework(source_dir)
     
+    # Prioritize key screens and UI components
     key_dirs = [
         'src/screens/chat',
         'src/screens/dashboard',
@@ -122,7 +134,7 @@ def main():
     for dir_path in key_dirs:
         full_path = source_dir / dir_path
         if full_path.exists():
-            for tsx_file in full_path.rglob('*.tsx'):
+            for tsx_file in sorted(full_path.rglob('*.tsx')):
                 try:
                     content = tsx_file.read_text()
                     if len(content) < 200:
@@ -144,8 +156,11 @@ def main():
                     print(f'Failed: {tsx_file}: {e}')
     
     print(f'Found {len(key_components)} components to migrate')
+    print(f'Using local Hermes gateway (no external API credits needed)')
     
     migrated = {}
+    failed = []
+    
     for i, comp in enumerate(key_components):
         print(f'[{i+1}/{len(key_components)}] Migrating {comp.name} ({comp.file})...')
         
@@ -155,18 +170,42 @@ def main():
             if len(code) > 50:
                 output_file = output_dir / f'{comp.name}.tsx'
                 output_file.write_text(code)
-                migrated[comp.name] = {'source': comp.file, 'target': str(output_file), 'chars': len(code)}
-                print(f'  -> Saved ({len(code)} chars)')
+                migrated[comp.name] = {
+                    'source': comp.file,
+                    'target': str(output_file),
+                    'chars': len(code),
+                    'source_chars': len(comp.full_source),
+                }
+                print(f'  -> Saved ({len(code)} chars from {len(comp.full_source)} source)')
                 time.sleep(2)
             else:
-                print(f'  -> Too short, skipped')
+                print(f'  -> Too short ({len(code)} chars), skipped')
+                failed.append(comp.name)
         else:
-            print(f'  -> FAILED')
+            print(f'  -> FAILED (no response)')
+            failed.append(comp.name)
             time.sleep(2)
     
+    # Save migration report
     report = output_dir / 'migration_report.json'
-    report.write_text(json.dumps({'total': len(key_components), 'migrated': len(migrated), 'components': migrated}, indent=2))
-    print(f'Done! {len(migrated)}/{len(key_components)} migrated')
+    report.write_text(json.dumps({
+        'total': len(key_components),
+        'migrated': len(migrated),
+        'failed': len(failed),
+        'components': migrated,
+        'failed_list': failed,
+    }, indent=2))
+    
+    print(f'\nMigration complete!')
+    print(f'  Migrated: {len(migrated)}/{len(key_components)}')
+    print(f'  Failed: {len(failed)}')
+    print(f'Report saved to {report}')
+    
+    # Summary of migrated files
+    if migrated:
+        print(f'\nMigrated components:')
+        for name, info in sorted(migrated.items()):
+            print(f'  {name}: {info["source"]} -> {info["target"]} ({info["chars"]} chars)')
 
 
 if __name__ == '__main__':

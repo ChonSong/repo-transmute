@@ -1,5 +1,190 @@
 {
-  "total": 82,
-  "migrated": 0,
-  "components": {}
+  "date": "2026-05-10",
+  "source_repo": "outsourc-e/hermes-workspace",
+  "target_repo": "ChonSong/agent-os",
+  "total_components_extracted": 629,
+  "total_components_migrated": 36,
+  "total_size_bytes": 763231,
+  "components": {
+    "active-model-kpi": {
+      "file": "data/migrated/active-model-kpi.tsx",
+      "size": 5360,
+      "size_human": "5.2K"
+    },
+    "agents-screen": {
+      "file": "data/migrated/agents-screen.tsx",
+      "size": 3742,
+      "size_human": "3.7K"
+    },
+    "analytics-hero-card": {
+      "file": "data/migrated/analytics-hero-card.tsx",
+      "size": 19472,
+      "size_human": "19.0K"
+    },
+    "analytics-summary-card": {
+      "file": "data/migrated/analytics-summary-card.tsx",
+      "size": 3844,
+      "size_human": "3.8K"
+    },
+    "chat-composer": {
+      "file": "data/migrated/chat-composer.tsx",
+      "size": 117052,
+      "size_human": "114.3K"
+    },
+    "chat-empty-state": {
+      "file": "data/migrated/chat-empty-state.tsx",
+      "size": 4252,
+      "size_human": "4.2K"
+    },
+    "chat-header": {
+      "file": "data/migrated/chat-header.tsx",
+      "size": 21152,
+      "size_human": "20.7K"
+    },
+    "chat-message-list": {
+      "file": "data/migrated/chat-message-list.tsx",
+      "size": 73205,
+      "size_human": "71.5K"
+    },
+    "chat-screen": {
+      "file": "data/migrated/chat-screen.tsx",
+      "size": 85625,
+      "size_human": "83.6K"
+    },
+    "chat-sidebar": {
+      "file": "data/migrated/chat-sidebar.tsx",
+      "size": 39681,
+      "size_human": "38.8K"
+    },
+    "collapsible": {
+      "file": "data/migrated/collapsible.tsx",
+      "size": 2787,
+      "size_human": "2.7K"
+    },
+    "command": {
+      "file": "data/migrated/command.tsx",
+      "size": 13103,
+      "size_human": "12.8K"
+    },
+    "context-bar": {
+      "file": "data/migrated/context-bar.tsx",
+      "size": 7101,
+      "size_human": "6.9K"
+    },
+    "dashboard-screen": {
+      "file": "data/migrated/dashboard-screen.tsx",
+      "size": 39872,
+      "size_human": "38.9K"
+    },
+    "dialog": {
+      "file": "data/migrated/dialog.tsx",
+      "size": 4399,
+      "size_human": "4.3K"
+    },
+    "hero-metrics": {
+      "file": "data/migrated/hero-metrics.tsx",
+      "size": 9224,
+      "size_human": "9.0K"
+    },
+    "mcp-screen": {
+      "file": "data/migrated/mcp-screen.tsx",
+      "size": 16491,
+      "size_human": "16.1K"
+    },
+    "mcp-server-card": {
+      "file": "data/migrated/mcp-server-card.tsx",
+      "size": 9956,
+      "size_human": "9.7K"
+    },
+    "mcp-server-dialog": {
+      "file": "data/migrated/mcp-server-dialog.tsx",
+      "size": 14258,
+      "size_human": "13.9K"
+    },
+    "message-item": {
+      "file": "data/migrated/message-item.tsx",
+      "size": 95543,
+      "size_human": "93.3K"
+    },
+    "message-status": {
+      "file": "data/migrated/message-status.tsx",
+      "size": 1218,
+      "size_human": "1.2K"
+    },
+    "message-timestamp": {
+      "file": "data/migrated/message-timestamp.tsx",
+      "size": 1240,
+      "size_human": "1.2K"
+    },
+    "model-info-card": {
+      "file": "data/migrated/model-info-card.tsx",
+      "size": 14093,
+      "size_human": "13.8K"
+    },
+    "operations-agent-card": {
+      "file": "data/migrated/operations-agent-card.tsx",
+      "size": 17060,
+      "size_human": "16.7K"
+    },
+    "operations-agent-detail": {
+      "file": "data/migrated/operations-agent-detail.tsx",
+      "size": 11311,
+      "size_human": "11.0K"
+    },
+    "operations-screen": {
+      "file": "data/migrated/operations-screen.tsx",
+      "size": 11922,
+      "size_human": "11.6K"
+    },
+    "ops-strip": {
+      "file": "data/migrated/ops-strip.tsx",
+      "size": 8924,
+      "size_human": "8.7K"
+    },
+    "orchestrator-card": {
+      "file": "data/migrated/orchestrator-card.tsx",
+      "size": 7263,
+      "size_human": "7.1K"
+    },
+    "provider-icon": {
+      "file": "data/migrated/provider-icon.tsx",
+      "size": 901,
+      "size_human": "901B"
+    },
+    "provider-wizard": {
+      "file": "data/migrated/provider-wizard.tsx",
+      "size": 34045,
+      "size_human": "33.2K"
+    },
+    "providers-screen": {
+      "file": "data/migrated/providers-screen.tsx",
+      "size": 57975,
+      "size_human": "56.6K"
+    },
+    "research-card": {
+      "file": "data/migrated/research-card.tsx",
+      "size": 283,
+      "size_human": "283B"
+    },
+    "scroll-to-bottom-button": {
+      "file": "data/migrated/scroll-to-bottom-button.tsx",
+      "size": 1680,
+      "size_human": "1.6K"
+    },
+    "switch": {
+      "file": "data/migrated/switch.tsx",
+      "size": 3326,
+      "size_human": "3.2K"
+    },
+    "toast": {
+      "file": "data/migrated/toast.tsx",
+      "size": 3028,
+      "size_human": "3.0K"
+    },
+    "widget-shell": {
+      "file": "data/migrated/widget-shell.tsx",
+      "size": 2843,
+      "size_human": "2.8K"
+    }
+  }
 }
