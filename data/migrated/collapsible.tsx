@@ -1,84 +1,72 @@
-import { createContext, useContext, useState, useCallback } from 'react'
+import * as React from 'react'
 import { cn } from '@/lib/utils'
 
-interface CollapsibleContextValue {
+interface CollapsibleContextType {
   open: boolean
-  onOpenChange: (open: boolean) => void
+  setOpen: (open: boolean) => void
 }
 
-const CollapsibleContext = createContext<CollapsibleContextValue>({
-  open: false,
-  onOpenChange: () => {},
-})
+const CollapsibleContext = React.createContext<CollapsibleContextType | null>(null)
+
+function useCollapsibleContext() {
+  const ctx = React.useContext(CollapsibleContext)
+  if (!ctx) throw new Error('Collapsible compound components must be rendered within <Collapsible>')
+  return ctx
+}
 
 interface CollapsibleProps {
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
-  defaultOpen?: boolean
   children: React.ReactNode
   className?: string
+  open?: boolean
+  defaultOpen?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 function Collapsible({
-  open: controlledOpen,
-  onOpenChange,
-  defaultOpen = false,
   children,
   className,
+  open: controlledOpen,
+  defaultOpen = false,
+  onOpenChange,
 }: CollapsibleProps) {
-  const [internalOpen, setInternalOpen] = useState(defaultOpen)
-
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen)
   const open = controlledOpen ?? internalOpen
 
-  const handleOpenChange = useCallback(
-    (next: boolean) => {
-      if (controlledOpen === undefined) {
-        setInternalOpen(next)
-      }
-      onOpenChange?.(next)
+  const setOpen = React.useCallback(
+    (val: boolean) => {
+      setInternalOpen(val)
+      onOpenChange?.(val)
     },
-    [controlledOpen, onOpenChange],
+    [onOpenChange],
   )
 
   return (
-    <CollapsibleContext.Provider value={{ open, onOpenChange: handleOpenChange }}>
+    <CollapsibleContext.Provider value={{ open, setOpen }}>
       <div className={className}>{children}</div>
     </CollapsibleContext.Provider>
   )
 }
 
-function useCollapsibleContext() {
-  const ctx = useContext(CollapsibleContext)
-  if (!ctx) {
-    throw new Error(
-      'Collapsible compound components must be used within a Collapsible wrapper',
-    )
-  }
-  return ctx
-}
-
-interface CollapsibleTriggerProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  children: React.ReactNode
+interface CollapsibleTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   className?: string
 }
 
-function CollapsibleTrigger({
-  className,
-  children,
-  ...props
-}: CollapsibleTriggerProps) {
-  const { open, onOpenChange } = useCollapsibleContext()
+function CollapsibleTrigger({ className, children, onClick, ...props }: CollapsibleTriggerProps) {
+  const { open, setOpen } = useCollapsibleContext()
 
   return (
     <button
       type="button"
-      data-panel-open={open ? '' : undefined}
       className={cn(
-        'group inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-left text-xs font-medium text-[var(--theme-muted)] transition-colors hover:bg-[var(--theme-card2)] hover:text-[var(--theme-text)] data-panel-open:text-[var(--theme-text)]',
+        'group inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-left text-xs font-medium text-[var(--theme-muted)] transition-colors hover:bg-[var(--theme-card2)] hover:text-[var(--theme-text)]',
+        open && 'text-[var(--theme-text)]',
         className,
       )}
-      onClick={() => onOpenChange(!open)}
+      onClick={(e) => {
+        setOpen(!open)
+        onClick?.(e)
+      }}
+      data-panel-open={open ? '' : undefined}
       {...props}
     >
       {children}
@@ -86,40 +74,29 @@ function CollapsibleTrigger({
   )
 }
 
-interface CollapsiblePanelProps
-  extends React.HTMLAttributes<HTMLDivElement> {
-  children: React.ReactNode
-  contentClassName?: string
+interface CollapsiblePanelProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string
-  /** Whether to keep the panel content mounted when collapsed */
-  keepMounted?: boolean
+  contentClassName?: string
+  children: React.ReactNode
 }
 
 function CollapsiblePanel({
   className,
   contentClassName,
   children,
-  keepMounted = true,
   ...props
 }: CollapsiblePanelProps) {
   const { open } = useCollapsibleContext()
-  const [mounted, setMounted] = useState(open)
-
-  // Keep mounted once opened if keepMounted is true
-  if (open) setMounted(true)
-
-  const shouldRender = open || (keepMounted && mounted)
-
-  if (!shouldRender) return null
 
   return (
     <div
-      data-ending-style={open ? undefined : ''}
-      data-starting-style={!open ? '' : undefined}
       className={cn(
-        'flex h-(--collapsible-panel-height) flex-col overflow-hidden text-sm transition-all duration-150 ease-out data-ending-style:h-0 data-starting-style:h-0',
+        'flex flex-col overflow-hidden text-sm transition-all duration-150 ease-out',
+        !open && 'h-0',
         className,
       )}
+      data-ending-style={!open ? '' : undefined}
+      style={{ height: open ? undefined : 0 }}
       {...props}
     >
       <div className={cn('pt-1', contentClassName)}>{children}</div>
