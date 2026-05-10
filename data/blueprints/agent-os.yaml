@@ -1,0 +1,1783 @@
+api_calls:
+- method: GET
+  url: ${scheme}//${location.host}/api/ws?token=${encodeURIComponent(resolved)}
+- method: GET
+  url: ${BASE}${url}
+- method: GET
+  url: /api/files/write/
+- method: GET
+  url: /api/files/
+- method: GET
+  url: ${hermesUrl}/v1/chat/completions
+- method: GET
+  url: '${process.env.HERMES_API_URL ?? '
+- method: POST
+  url: ${hermesUrl}/v1/chat/completions
+- method: GET
+  url: /api/events/stream
+- method: GET
+  url: ${proto}//${window.location.host}/api/events?${qs.toString()}
+- method: GET
+  url: /api/sessions?limit=50
+- method: GET
+  url: /api/sessions/${encodeURIComponent(sessionId)}/messages
+- method: GET
+  url: /api/sessions/${encodeURIComponent(sessionId)}
+- method: GET
+  url: /api/agent/chat
+- method: POST
+  url: /api/agent/chat
+- method: GET
+  url: /api/system/uptime
+- method: GET
+  url: /api/tunnel
+- method: GET
+  url: /api/tools/toolsets
+- method: GET
+  url: /api/skills
+- method: GET
+  url: /api/skills/toggle
+- method: PUT
+  url: /api/skills/toggle
+- method: GET
+  url: /api/analytics/real
+- method: GET
+  url: /api/db/health
+- method: GET
+  url: /api/status
+- method: GET
+  url: /api/sessions?limit=20
+- method: GET
+  url: /api/events/recent?limit=50
+- method: GET
+  url: /api/docker/info
+- method: GET
+  url: /api/docker/stats
+- method: GET
+  url: /api/sessions/${sessionId}/messages
+- method: GET
+  url: /api/cron/jobs
+- method: GET
+  url: /api/cron/jobs/${jobId}
+- method: POST
+  url: /api/cron/jobs
+- method: DELETE
+  url: /api/cron/jobs/${jobId}
+- method: GET
+  url: /api/agent/config
+- method: GET
+  url: /api/docker/containers/json?all=true
+- method: GET
+  url: /api/docker/containers/${id}/${action}
+- method: POST
+  url: /api/docker/containers/${id}/${action}
+- method: GET
+  url: /api/mcp/servers
+- method: GET
+  url: /api/mcp/servers/${encodeURIComponent(name)}/test
+- method: GET
+  url: /api/mcp/servers/${encodeURIComponent(name)}/tools
+- method: GET
+  url: /api/mcp/servers/${encodeURIComponent(name)}
+- method: GET
+  url: /api/mcp/servers/${encodeURIComponent(server.name)}
+- method: POST
+  url: /api/mcp/servers
+- method: GET
+  url: /api/sessions/${encodeURIComponent(y)}/messages
+- method: GET
+  url: /api/sessions/${encodeURIComponent(y)}
+- method: GET
+  url: /api/docker/containers/${e}/${t}
+- method: GET
+  url: ${LM}${e}
+- method: GET
+  url: /api/cron/jobs/${x}
+- method: GET
+  url: /api/sessions/${k}/messages
+- method: POST
+  url: /api/docker/containers/${e}/${t}
+- method: DELETE
+  url: /api/cron/jobs/${x}
+- method: GET
+  url: ${s}//${location.host}/api/ws?token=${encodeURIComponent(i)}
+- method: GET
+  url: ${j}//${window.location.host}/api/events?${D.toString()}
+components:
+- api_calls: 0
+  children:
+  - Navigate
+  file: apps/dashboard/frontend/src/App.tsx
+  jsx_complexity: 1
+  line: 43
+  name: RootRedirect
+  props: 0
+  state_count: 0
+  type: unknown
+- api_calls: 0
+  children:
+  - ToolManagerPage
+  - LogsPage
+  - FileExplorerPage
+  - RootRedirect
+  - EnvPage
+  - ProfilesPage
+  - Sidebar
+  - ChatPage
+  - TerminalPage
+  - ConfigPage
+  - StatusBar
+  - ContainerPage
+  - AppStorePage
+  - Navigate
+  - SessionsPage
+  - DocsPage
+  - Routes
+  - ChatPanel
+  - MemoryPage
+  - Route
+  - CronPage
+  - DashboardPage
+  - MCPPage
+  - AnalyticsPage
+  - SettingsPage
+  - ObservabilityPage
+  - ModelsPage
+  file: apps/dashboard/frontend/src/App.tsx
+  jsx_complexity: 51
+  line: 47
+  name: AppInner
+  props: 0
+  state_count: 0
+  type: unknown
+- api_calls: 0
+  children:
+  - AppInner
+  file: apps/dashboard/frontend/src/App.tsx
+  jsx_complexity: 1
+  line: 96
+  name: App
+  props: 0
+  state_count: 0
+  type: unknown
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/context/ThemeContext.tsx
+  jsx_complexity: 0
+  line: 44
+  name: ThemeProvider
+  props: 0
+  state_count: 0
+  type: unknown
+- api_calls: 0
+  children:
+  - Typography
+  - Button
+  file: apps/dashboard/frontend/src/components/LanguageSwitcher.tsx
+  jsx_complexity: 4
+  line: 9
+  name: LanguageSwitcher
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/AutoField.tsx
+  jsx_complexity: 0
+  line: 6
+  name: FieldHint
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/AutoField.tsx
+  jsx_complexity: 0
+  line: 20
+  name: AutoField
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/PlatformsCard.tsx
+  jsx_complexity: 0
+  line: 8
+  name: PlatformsCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/DeleteConfirmDialog.tsx
+  jsx_complexity: 0
+  line: 4
+  name: DeleteConfirmDialog
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ToolCallRenderer.tsx
+  jsx_complexity: 0
+  line: 68
+  name: ToolCallRenderer
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ToolCallRenderer.tsx
+  jsx_complexity: 0
+  line: 85
+  name: ToolCallItem
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/Markdown.tsx
+  jsx_complexity: 0
+  line: 12
+  name: Markdown
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/Markdown.tsx
+  jsx_complexity: 1
+  line: 39
+  name: StreamingCaret
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/Markdown.tsx
+  jsx_complexity: 0
+  line: 159
+  name: Block
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/Markdown.tsx
+  jsx_complexity: 0
+  line: 285
+  name: InlineContent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/Markdown.tsx
+  jsx_complexity: 0
+  line: 348
+  name: HighlightedText
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/Backdrop.tsx
+  jsx_complexity: 7
+  line: 24
+  name: Backdrop
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ThemeSwitcher.tsx
+  jsx_complexity: 0
+  line: 21
+  name: ThemeSwitcher
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ThemeSwitcher.tsx
+  jsx_complexity: 0
+  line: 147
+  name: ThemeSwatch
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ThemeSwitcher.tsx
+  jsx_complexity: 1
+  line: 164
+  name: PlaceholderSwatch
+  props: 1
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - AIEEvent
+  - Record
+  - HTMLDivElement
+  - EventType
+  file: apps/dashboard/frontend/src/components/ObservabilityPanel.tsx
+  jsx_complexity: 22
+  line: 61
+  name: ObservabilityPanel
+  props: 0
+  state_count: 2
+  type: component
+- api_calls: 0
+  children:
+  - Link
+  file: apps/dashboard/frontend/src/components/SidebarStatusStrip.tsx
+  jsx_complexity: 10
+  line: 7
+  name: SidebarStatusStrip
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/Toast.tsx
+  jsx_complexity: 0
+  line: 4
+  name: Toast
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/OAuthProvidersCard.tsx
+  jsx_complexity: 0
+  line: 53
+  name: OAuthProvidersCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ChatSidebar.tsx
+  jsx_complexity: 0
+  line: 90
+  name: ChatSidebar
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ModelInfoCard.tsx
+  jsx_complexity: 0
+  line: 15
+  name: ModelInfoCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ToolCall.tsx
+  jsx_complexity: 0
+  line: 53
+  name: ToolCall
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ToolCall.tsx
+  jsx_complexity: 0
+  line: 177
+  name: Section
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - Input
+  - ModelOptionProvider
+  - ModelOptionsResponse
+  - ProviderColumn
+  - Button
+  - ModelColumn
+  - Search
+  - Spinner
+  file: apps/dashboard/frontend/src/components/ModelPickerDialog.tsx
+  jsx_complexity: 26
+  line: 65
+  name: ModelPickerDialog
+  props: 0
+  state_count: 2
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ModelPickerDialog.tsx
+  jsx_complexity: 0
+  line: 306
+  name: ProviderColumn
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ModelPickerDialog.tsx
+  jsx_complexity: 0
+  line: 374
+  name: ModelColumn
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ModelPickerDialog.tsx
+  jsx_complexity: 1
+  line: 444
+  name: CurrentTag
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/Sidebar.tsx
+  jsx_complexity: 0
+  line: 58
+  name: Sidebar
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ChatPanel.tsx
+  jsx_complexity: 0
+  line: 73
+  name: ChatPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/OAuthLoginModal.tsx
+  jsx_complexity: 0
+  line: 27
+  name: OAuthLoginModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/SlashPopover.tsx
+  jsx_complexity: 0
+  line: 48
+  name: SlashPopover
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - Typography
+  file: apps/dashboard/frontend/src/components/SidebarFooter.tsx
+  jsx_complexity: 3
+  line: 6
+  name: SidebarFooter
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/NouiTypography.tsx
+  jsx_complexity: 0
+  line: 23
+  name: Typography
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/NouiTypography.tsx
+  jsx_complexity: 0
+  line: 58
+  name: H2
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 2
+  children:
+  - HardDrive
+  - Clock
+  - TunnelInfo
+  - Globe
+  - Wifi
+  - Cpu
+  - Database
+  file: apps/dashboard/frontend/src/components/StatusBar.tsx
+  jsx_complexity: 22
+  line: 19
+  name: StatusBar
+  props: 0
+  state_count: 2
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ui/card.tsx
+  jsx_complexity: 0
+  line: 25
+  name: Card
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ui/card.tsx
+  jsx_complexity: 0
+  line: 38
+  name: CardHeader
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ui/card.tsx
+  jsx_complexity: 0
+  line: 42
+  name: CardTitle
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ui/card.tsx
+  jsx_complexity: 0
+  line: 46
+  name: CardDescription
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ui/card.tsx
+  jsx_complexity: 0
+  line: 50
+  name: CardContent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ui/confirm-dialog.tsx
+  jsx_complexity: 0
+  line: 7
+  name: ConfirmDialog
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ui/input.tsx
+  jsx_complexity: 0
+  line: 3
+  name: Input
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ui/separator.tsx
+  jsx_complexity: 0
+  line: 3
+  name: Separator
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/components/ui/label.tsx
+  jsx_complexity: 0
+  line: 3
+  name: Label
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/ToolManagerPage.tsx
+  jsx_complexity: 0
+  line: 51
+  name: ToolCard
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/ToolManagerPage.tsx
+  jsx_complexity: 0
+  line: 99
+  name: SkillRow
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 3
+  children:
+  - Info
+  - H2
+  - RefreshCw
+  - ToolCard
+  - SkillRow
+  - Skill
+  - Plus
+  - XCircle
+  - Toolset
+  - Terminal
+  - Zap
+  - Search
+  file: apps/dashboard/frontend/src/pages/ToolManagerPage.tsx
+  jsx_complexity: 57
+  line: 136
+  name: ToolManagerPage
+  props: 0
+  state_count: 4
+  type: page
+- api_calls: 0
+  children:
+  - MarketplaceModal
+  - Button
+  - ListItem
+  - Badge
+  - PanelItem
+  - Download
+  - Spinner
+  - Input
+  - Plus
+  - Set
+  - SkillInfo
+  - Search
+  - Filter
+  - TsIcon
+  - Label
+  - SkillRow
+  - ToolsetInfo
+  - Package
+  - PluginSlot
+  - Toast
+  file: apps/dashboard/frontend/src/pages/SkillsPage.tsx
+  jsx_complexity: 100
+  line: 101
+  name: SkillsPage
+  props: 0
+  state_count: 5
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/SkillsPage.tsx
+  jsx_complexity: 0
+  line: 712
+  name: MarketplaceModal
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/SkillsPage.tsx
+  jsx_complexity: 0
+  line: 1069
+  name: SkillRow
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/SkillsPage.tsx
+  jsx_complexity: 0
+  line: 1114
+  name: PanelItem
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - Segmented
+  - RefreshCw
+  - Switch
+  - HTMLDivElement
+  - Label
+  - Badge
+  - FilterGroup
+  - Button
+  - PluginSlot
+  - FileText
+  - Spinner
+  file: apps/dashboard/frontend/src/pages/LogsPage.tsx
+  jsx_complexity: 41
+  line: 50
+  name: LogsPage
+  props: 0
+  state_count: 6
+  type: page
+- api_calls: 0
+  children:
+  - Input
+  - H2
+  - Users
+  - Trash2
+  - Label
+  - ChevronDown
+  - Badge
+  - Plus
+  - ProfileInfo
+  - Pencil
+  - Button
+  - DeleteConfirmDialog
+  - Terminal
+  - Toast
+  file: apps/dashboard/frontend/src/pages/ProfilesPage.tsx
+  jsx_complexity: 61
+  line: 20
+  name: ProfilesPage
+  props: 0
+  state_count: 3
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/ModelsPage.tsx
+  jsx_complexity: 0
+  line: 78
+  name: TokenBar
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/ModelsPage.tsx
+  jsx_complexity: 0
+  line: 122
+  name: CapabilityBadges
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/ModelsPage.tsx
+  jsx_complexity: 0
+  line: 164
+  name: UseAsMenu
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/ModelsPage.tsx
+  jsx_complexity: 0
+  line: 291
+  name: ModelCard
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/ModelsPage.tsx
+  jsx_complexity: 0
+  line: 447
+  name: ModelSettingsPanel
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - RefreshCw
+  - Badge
+  - ModelsAnalyticsResponse
+  - ModelSettingsPanel
+  - Button
+  - AuxiliaryModelsResponse
+  - Stats
+  - PluginSlot
+  - ModelCard
+  - Cpu
+  - Spinner
+  file: apps/dashboard/frontend/src/pages/ModelsPage.tsx
+  jsx_complexity: 33
+  line: 641
+  name: ModelsPage
+  props: 0
+  state_count: 3
+  type: page
+- api_calls: 4
+  children:
+  - Trash2
+  - AbortController
+  - PanelLeftOpen
+  - HTMLDivElement
+  - Clock
+  - Send
+  - Plus
+  - Markdown
+  - Sparkles
+  - Message
+  - PanelLeftClose
+  - Square
+  - Loader2
+  - MessageSquare
+  - Toast
+  - Session
+  file: apps/dashboard/frontend/src/pages/ChatPage.tsx
+  jsx_complexity: 63
+  line: 72
+  name: ChatPage
+  props: 0
+  state_count: 4
+  type: page
+- api_calls: 0
+  children:
+  - Play
+  - H2
+  - HTMLDivElement
+  - TerminalIcon
+  - AlertCircle
+  - Socket
+  - FitAddon
+  - Loader2
+  - Terminal
+  file: apps/dashboard/frontend/src/pages/TerminalPage.tsx
+  jsx_complexity: 32
+  line: 15
+  name: TerminalPage
+  props: 0
+  state_count: 1
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/ConfigPage.tsx
+  jsx_complexity: 0
+  line: 70
+  name: CategoryIcon
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - RotateCcw
+  - AutoField
+  - Button
+  - ListItem
+  - Badge
+  - Record
+  - HTMLInputElement
+  - Settings2
+  - FileText
+  - Download
+  - Spinner
+  - Code
+  - Input
+  - Save
+  - Search
+  - Filter
+  - CategoryIcon
+  - Upload
+  - FormInput
+  - PluginSlot
+  - Toast
+  file: apps/dashboard/frontend/src/pages/ConfigPage.tsx
+  jsx_complexity: 93
+  line: 85
+  name: ConfigPage
+  props: 0
+  state_count: 2
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/AnalyticsPage.tsx
+  jsx_complexity: 0
+  line: 48
+  name: TokenBarChart
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/AnalyticsPage.tsx
+  jsx_complexity: 0
+  line: 141
+  name: DailyTable
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/AnalyticsPage.tsx
+  jsx_complexity: 0
+  line: 208
+  name: ModelTable
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/AnalyticsPage.tsx
+  jsx_complexity: 0
+  line: 278
+  name: SkillTable
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - DailyTable
+  - RefreshCw
+  - AnalyticsResponse
+  - BarChart3
+  - Badge
+  - TokenBarChart
+  - ModelTable
+  - Button
+  - Stats
+  - PluginSlot
+  - SkillTable
+  - Spinner
+  file: apps/dashboard/frontend/src/pages/AnalyticsPage.tsx
+  jsx_complexity: 34
+  line: 339
+  name: AnalyticsPage
+  props: 0
+  state_count: 2
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/ObservabilityPage.tsx
+  jsx_complexity: 0
+  line: 82
+  name: MetricCard
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/ObservabilityPage.tsx
+  jsx_complexity: 0
+  line: 109
+  name: StatusBadge
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/ObservabilityPage.tsx
+  jsx_complexity: 0
+  line: 138
+  name: EventBar
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 9
+  children:
+  - H2
+  - AnalyticsData
+  - RefreshCw
+  - EventBar
+  - DbHealth
+  - TunnelInfo
+  - StatusData
+  - Record
+  - DockerInfo
+  - Zap
+  - Array
+  - Date
+  - Terminal
+  - StatusBadge
+  - SessionRow
+  - TrendingUp
+  - MetricCard
+  - Activity
+  file: apps/dashboard/frontend/src/pages/ObservabilityPage.tsx
+  jsx_complexity: 139
+  line: 185
+  name: ObservabilityPage
+  props: 0
+  state_count: 9
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/SessionsPage.tsx
+  jsx_complexity: 0
+  line: 71
+  name: SnippetHighlight
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/SessionsPage.tsx
+  jsx_complexity: 0
+  line: 99
+  name: ToolCallBlock
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/SessionsPage.tsx
+  jsx_complexity: 0
+  line: 141
+  name: MessageBubble
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/SessionsPage.tsx
+  jsx_complexity: 0
+  line: 257
+  name: MessageList
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/SessionsPage.tsx
+  jsx_complexity: 0
+  line: 290
+  name: SessionRow
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - Clock
+  - SessionInfo
+  - Button
+  - DeleteConfirmDialog
+  - HTMLPreElement
+  - Badge
+  - SessionRow
+  - Spinner
+  - Input
+  - StatusResponse
+  - ChevronLeft
+  - CheckCircle2
+  - Search
+  - Database
+  - ChevronRight
+  - PlatformsCard
+  - AlertTriangle
+  - ReturnType
+  - PluginSlot
+  - Toast
+  file: apps/dashboard/frontend/src/pages/SessionsPage.tsx
+  jsx_complexity: 73
+  line: 427
+  name: SessionsPage
+  props: 0
+  state_count: 5
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/AppStorePage.tsx
+  jsx_complexity: 3
+  line: 161
+  name: SunIcon
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/AppStorePage.tsx
+  jsx_complexity: 2
+  line: 168
+  name: GitIcon
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/AppStorePage.tsx
+  jsx_complexity: 2
+  line: 175
+  name: ShieldIcon
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/AppStorePage.tsx
+  jsx_complexity: 2
+  line: 182
+  name: SyncIcon
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 3
+  children:
+  - Trash2
+  - CronJob
+  - RefreshCw
+  - Star
+  - H2
+  - Clock
+  - LayoutGrid
+  - CheckCircle2
+  - Calendar
+  - Search
+  file: apps/dashboard/frontend/src/pages/AppStorePage.tsx
+  jsx_complexity: 47
+  line: 216
+  name: AppStorePage
+  props: 0
+  state_count: 3
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/SettingsPage.tsx
+  jsx_complexity: 0
+  line: 51
+  name: SettingToggle
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/SettingsPage.tsx
+  jsx_complexity: 0
+  line: 83
+  name: SettingInput
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/SettingsPage.tsx
+  jsx_complexity: 0
+  line: 124
+  name: SectionCard
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/SettingsPage.tsx
+  jsx_complexity: 0
+  line: 136
+  name: SettingRow
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - RefreshCw
+  file: apps/dashboard/frontend/src/pages/SettingsPage.tsx
+  jsx_complexity: 1
+  line: 145
+  name: LoadingSpinner
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - Palette
+  file: apps/dashboard/frontend/src/pages/SettingsPage.tsx
+  jsx_complexity: 6
+  line: 150
+  name: ThemePicker
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 5
+  children:
+  - LoadingSpinner
+  - H2
+  - AgentConfig
+  - RefreshCw
+  - SettingRow
+  - DbHealth
+  - TunnelInfo
+  - StatusData
+  - DockerInfo
+  - SettingToggle
+  - SectionCard
+  - SettingInput
+  - Save
+  - Toast
+  - ThemePicker
+  file: apps/dashboard/frontend/src/pages/SettingsPage.tsx
+  jsx_complexity: 83
+  line: 178
+  name: SettingsPage
+  props: 0
+  state_count: 5
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/ContainerPage.tsx
+  jsx_complexity: 0
+  line: 49
+  name: MetricCard
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - RefreshCw
+  - H2
+  - Container
+  - Record
+  - Box
+  - Wifi
+  - ActionBtn
+  - MetricCard
+  - Activity
+  - Circle
+  file: apps/dashboard/frontend/src/pages/ContainerPage.tsx
+  jsx_complexity: 72
+  line: 86
+  name: ContainerPage
+  props: 0
+  state_count: 2
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/ContainerPage.tsx
+  jsx_complexity: 0
+  line: 344
+  name: ActionBtn
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - PluginSlot
+  - ExternalLink
+  file: apps/dashboard/frontend/src/pages/DocsPage.tsx
+  jsx_complexity: 6
+  line: 18
+  name: DocsPage
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - MemoryFile
+  - H2
+  - Clock
+  - Brain
+  - Loader2
+  - FileText
+  - Save
+  - Search
+  file: apps/dashboard/frontend/src/pages/MemoryPage.tsx
+  jsx_complexity: 48
+  line: 18
+  name: MemoryPage
+  props: 0
+  state_count: 2
+  type: page
+- api_calls: 6
+  children:
+  - Play
+  - H2
+  - Trash2
+  - ChevronDown
+  - Plug
+  - AlertCircle
+  - Plus
+  - ChevronRight
+  - Set
+  - XCircle
+  - CheckCircle2
+  - Loader2
+  - MCPServer
+  - Wrench
+  - Server
+  file: apps/dashboard/frontend/src/pages/MCPPage.tsx
+  jsx_complexity: 79
+  line: 36
+  name: MCPPage
+  props: 0
+  state_count: 3
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/FileExplorerPage.tsx
+  jsx_complexity: 0
+  line: 41
+  name: PathBreadcrumb
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/FileExplorerPage.tsx
+  jsx_complexity: 0
+  line: 66
+  name: NewFileModal
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/FileExplorerPage.tsx
+  jsx_complexity: 0
+  line: 138
+  name: DeleteConfirm
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - Trash2
+  - H2
+  - RefreshCw
+  - ChevronRight
+  - FileEntry
+  - Plus
+  - Folder
+  - DeleteConfirm
+  - NewFileModal
+  - Save
+  - Toast
+  - FileText
+  - FileContent
+  - PathBreadcrumb
+  file: apps/dashboard/frontend/src/pages/FileExplorerPage.tsx
+  jsx_complexity: 72
+  line: 176
+  name: FileExplorerPage
+  props: 0
+  state_count: 5
+  type: page
+- api_calls: 1
+  children:
+  - H2
+  - AnalyticsData
+  - RefreshCw
+  - StatusData
+  - Record
+  - Server
+  - UsageData
+  - MessageSquare
+  - TrendingUp
+  - Activity
+  file: apps/dashboard/frontend/src/pages/DashboardPage.tsx
+  jsx_complexity: 68
+  line: 58
+  name: DashboardPage
+  props: 0
+  state_count: 4
+  type: page
+- api_calls: 0
+  children:
+  - Input
+  - CronJob
+  - Play
+  - Trash2
+  - Label
+  - Clock
+  - Badge
+  - Plus
+  - Select
+  - Pause
+  - Zap
+  - Button
+  - SelectOption
+  - DeleteConfirmDialog
+  - PluginSlot
+  - Toast
+  - Spinner
+  file: apps/dashboard/frontend/src/pages/CronPage.tsx
+  jsx_complexity: 61
+  line: 38
+  name: CronPage
+  props: 0
+  state_count: 1
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/EnvPage.tsx
+  jsx_complexity: 0
+  line: 93
+  name: EnvVarRow
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/EnvPage.tsx
+  jsx_complexity: 0
+  line: 330
+  name: ProviderGroupCard
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - OAuthProvidersCard
+  - Icon
+  - Record
+  - EnvVarRow
+  - Zap
+  - ProviderGroupCard
+  - Button
+  - DeleteConfirmDialog
+  - PluginSlot
+  - Toast
+  - CollapsibleUnset
+  - Spinner
+  file: apps/dashboard/frontend/src/pages/EnvPage.tsx
+  jsx_complexity: 42
+  line: 483
+  name: EnvPage
+  props: 0
+  state_count: 1
+  type: page
+- api_calls: 0
+  children: []
+  file: apps/dashboard/frontend/src/pages/EnvPage.tsx
+  jsx_complexity: 0
+  line: 816
+  name: CollapsibleUnset
+  props: 0
+  state_count: 0
+  type: page
+framework: react
+migration_order:
+- Navigate
+- RootRedirect
+- Info
+- H2
+- RefreshCw
+- ToolCard
+- SkillRow
+- Skill
+- Plus
+- XCircle
+- Toolset
+- Terminal
+- Zap
+- Search
+- ToolManagerPage
+- Segmented
+- Switch
+- HTMLDivElement
+- Label
+- Badge
+- FilterGroup
+- Button
+- PluginSlot
+- FileText
+- Spinner
+- LogsPage
+- Trash2
+- ChevronRight
+- FileEntry
+- Folder
+- DeleteConfirm
+- NewFileModal
+- Save
+- Toast
+- FileContent
+- PathBreadcrumb
+- FileExplorerPage
+- OAuthProvidersCard
+- Icon
+- Record
+- EnvVarRow
+- ProviderGroupCard
+- DeleteConfirmDialog
+- CollapsibleUnset
+- EnvPage
+- Input
+- Users
+- ChevronDown
+- ProfileInfo
+- Pencil
+- ProfilesPage
+- Sidebar
+- AbortController
+- PanelLeftOpen
+- Clock
+- Send
+- Markdown
+- Sparkles
+- Message
+- PanelLeftClose
+- Square
+- Loader2
+- MessageSquare
+- Session
+- ChatPage
+- Play
+- TerminalIcon
+- AlertCircle
+- Socket
+- FitAddon
+- TerminalPage
+- RotateCcw
+- AutoField
+- ListItem
+- HTMLInputElement
+- Settings2
+- Download
+- Code
+- Filter
+- CategoryIcon
+- Upload
+- FormInput
+- ConfigPage
+- HardDrive
+- TunnelInfo
+- Globe
+- Wifi
+- Cpu
+- Database
+- StatusBar
+- Container
+- Box
+- ActionBtn
+- MetricCard
+- Activity
+- Circle
+- ContainerPage
+- CronJob
+- Star
+- LayoutGrid
+- CheckCircle2
+- Calendar
+- AppStorePage
+- SessionInfo
+- HTMLPreElement
+- SessionRow
+- StatusResponse
+- ChevronLeft
+- PlatformsCard
+- AlertTriangle
+- ReturnType
+- SessionsPage
+- ExternalLink
+- DocsPage
+- Routes
+- ChatPanel
+- MemoryFile
+- Brain
+- MemoryPage
+- Route
+- Select
+- Pause
+- SelectOption
+- CronPage
+- AnalyticsData
+- StatusData
+- Server
+- UsageData
+- TrendingUp
+- DashboardPage
+- Plug
+- Set
+- MCPServer
+- Wrench
+- MCPPage
+- DailyTable
+- AnalyticsResponse
+- BarChart3
+- TokenBarChart
+- ModelTable
+- Stats
+- SkillTable
+- AnalyticsPage
+- LoadingSpinner
+- AgentConfig
+- SettingRow
+- DbHealth
+- DockerInfo
+- SettingToggle
+- SectionCard
+- SettingInput
+- Palette
+- ThemePicker
+- SettingsPage
+- EventBar
+- Array
+- Date
+- StatusBadge
+- ObservabilityPage
+- ModelsAnalyticsResponse
+- ModelSettingsPanel
+- AuxiliaryModelsResponse
+- ModelCard
+- ModelsPage
+- AppInner
+- App
+- ThemeProvider
+- Typography
+- LanguageSwitcher
+- FieldHint
+- ToolCallRenderer
+- ToolCallItem
+- StreamingCaret
+- Block
+- InlineContent
+- HighlightedText
+- Backdrop
+- ThemeSwitcher
+- ThemeSwatch
+- PlaceholderSwatch
+- AIEEvent
+- EventType
+- ObservabilityPanel
+- Link
+- SidebarStatusStrip
+- ChatSidebar
+- ModelInfoCard
+- ToolCall
+- Section
+- ModelOptionProvider
+- ModelOptionsResponse
+- ProviderColumn
+- ModelColumn
+- ModelPickerDialog
+- CurrentTag
+- OAuthLoginModal
+- SlashPopover
+- SidebarFooter
+- Card
+- CardHeader
+- CardTitle
+- CardDescription
+- CardContent
+- ConfirmDialog
+- Separator
+- MarketplaceModal
+- PanelItem
+- SkillInfo
+- TsIcon
+- ToolsetInfo
+- Package
+- SkillsPage
+- TokenBar
+- CapabilityBadges
+- UseAsMenu
+- SnippetHighlight
+- ToolCallBlock
+- MessageBubble
+- MessageList
+- SunIcon
+- GitIcon
+- ShieldIcon
+- SyncIcon
+routes:
+- component: ''
+  path: blog
+- component: ''
+  path: blog/feed
+- component: ''
+  path: post/:id
+- component: ''
+  path: ${parentPath}
+- component: ''
+  path: ${parentPath}
+- component: ''
+  path: blog
+- component: ''
+  path: blog/feed
+- component: ''
+  path: post/:id
+- component: ''
+  path: blog
+- component: ''
+  path: blog/feed
+- component: ''
+  path: post/:id
+- component: ''
+  path: '*'
+- component: ''
+  path: /
+- component: ''
+  path: accounts
+- component: ''
+  path: /
+- component: ''
+  path: accounts
+- component: ''
+  path: /
+- component: ''
+  path: accounts
+- component: ''
+  path: /
+- component: ''
+  path: accounts
+- component: ''
+  path: '*'
+- component: ''
+  path: /
+- component: ''
+  path: accounts
+- component: ''
+  path: /
+- component: ''
+  path: accounts
+- component: ''
+  path: '*'
+- component: ''
+  path: /
+- component: ''
+  path: accounts
+- component: ''
+  path: /
+- component: ''
+  path: accounts
+- component: ''
+  path: '*'
+- component: ''
+  path: /
+- component: ''
+  path: accounts
+- component: ''
+  path: /
+- component: ''
+  path: accounts
+- component: ''
+  path: /
+- component: ''
+  path: /dashboard
+- component: ''
+  path: /containers
+- component: ''
+  path: /sessions
+- component: ''
+  path: /cron
+- component: ''
+  path: /profiles
+- component: ''
+  path: /memory
+- component: ''
+  path: /mcp
+- component: ''
+  path: /observability
+- component: ''
+  path: /analytics
+- component: ''
+  path: /appstore
+- component: ''
+  path: /files
+- component: ''
+  path: /tools
+- component: ''
+  path: /settings
+- component: ''
+  path: /config
+- component: ''
+  path: /chat
+- component: ''
+  path: /env
+- component: ''
+  path: /logs
+- component: ''
+  path: /models
+- component: ''
+  path: /docs
+- component: ''
+  path: /terminal
+- component: ''
+  path: '*'
+source_repo: /opt/data/agent-os
+style_approach: css-variables
+style_system:
+  approach: css-variables
+  css_variables: 193
+  themes: 2
+total_files: 82

@@ -1,0 +1,7148 @@
+api_calls:
+- method: GET
+  url: http://127.0.0.1:${port}/health
+- method: GET
+  url: http://127.0.0.1:${workspaceDaemonPort}/api/workspace/version
+- method: GET
+  url: /api/connection-status
+- method: GET
+  url: /api/gateway-status
+- method: GET
+  url: /api/cli-agents
+- method: GET
+  url: /api/swarm-chat?workerId=${encodeURIComponent(workerId)}&limit=${limit}
+- method: GET
+  url: /api/swarm-direct-chat
+- method: POST
+  url: /api/swarm-direct-chat
+- method: GET
+  url: /api/crew-status
+- method: GET
+  url: ${CLAUDE_API}/v1/responses
+- method: POST
+  url: ${CLAUDE_API}/v1/responses
+- method: GET
+  url: https://api.openai.com/v1/organization/usage/completions?start_time=
+- method: GET
+  url: https://openrouter.ai/api/v1/auth/key
+- method: GET
+  url: ${CLAUDE_API}${path}
+- method: GET
+  url: ${CLAUDE_API}/api/sessions/${sessionId}/chat/stream
+- method: GET
+  url: ${CLAUDE_API}/health
+- method: POST
+  url: ${CLAUDE_API}${path}
+- method: PATCH
+  url: ${CLAUDE_API}${path}
+- method: DELETE
+  url: ${CLAUDE_API}${path}
+- method: POST
+  url: ${CLAUDE_API}/api/sessions/${sessionId}/chat/stream
+- method: GET
+  url: ${CLAUDE_API}/api/sessions/${encodeURIComponent(explicitSessionId)}
+- method: GET
+  url: ${CLAUDE_API}/api/sessions?limit=1
+- method: GET
+  url: ${CLAUDE_API}/api/sessions/${encodeURIComponent(targetSessionId)}/messages
+- method: GET
+  url: ${CLAUDE_API}/v1/models
+- method: GET
+  url: ${url}/rest/v1/${path}
+- method: GET
+  url: https://api.resend.com/emails
+- method: POST
+  url: https://api.resend.com/emails
+- method: GET
+  url: ${CLAUDE_DASHBOARD_URL}/
+- method: GET
+  url: ${CLAUDE_API}/api/sessions/__probe__/chat/stream
+- method: GET
+  url: ${CLAUDE_API}/v1/chat/completions
+- method: GET
+  url: ${CLAUDE_API}/api/mcp
+- method: GET
+  url: ${CLAUDE_DASHBOARD_URL}/api/status
+- method: GET
+  url: ${candidate}/health
+- method: GET
+  url: ${candidate}/api/status
+- method: POST
+  url: ${CLAUDE_API}/api/sessions/__probe__/chat/stream
+- method: GET
+  url: /api/claude-jobs
+- method: GET
+  url: /api/claude-jobs/${encodeURIComponent(jobId)}?action=runs&limit=20
+- method: GET
+  url: /api/claude-jobs/${encodeURIComponent(jobId)}?action=run
+- method: GET
+  url: /api/claude-jobs/${encodeURIComponent(jobId)}?action=run-if-due
+- method: GET
+  url: /api/claude-jobs/${encodeURIComponent(payload.jobId)}
+- method: GET
+  url: /api/claude-jobs/${encodeURIComponent(jobId)}
+- method: GET
+  url: ${base}/${taskId}
+- method: GET
+  url: ${base}/${taskId}?action=launch
+- method: GET
+  url: ${base}/${taskId}?action=move
+- method: PATCH
+  url: ${base}/${taskId}
+- method: DELETE
+  url: ${base}/${taskId}
+- method: POST
+  url: ${base}/${taskId}?action=launch
+- method: POST
+  url: ${base}/${taskId}?action=move
+- method: GET
+  url: ${CLAUDE_API}?include_disabled=true
+- method: GET
+  url: ${CLAUDE_API}/${jobId}
+- method: GET
+  url: ${CLAUDE_API}/${jobId}?action=pause
+- method: GET
+  url: ${CLAUDE_API}/${jobId}?action=resume
+- method: GET
+  url: ${CLAUDE_API}/${jobId}?action=run
+- method: GET
+  url: ${CLAUDE_API}/${jobId}?action=output&limit=${limit}
+- method: PATCH
+  url: ${CLAUDE_API}/${jobId}
+- method: DELETE
+  url: ${CLAUDE_API}/${jobId}
+- method: POST
+  url: ${CLAUDE_API}/${jobId}?action=pause
+- method: POST
+  url: ${CLAUDE_API}/${jobId}?action=resume
+- method: POST
+  url: ${CLAUDE_API}/${jobId}?action=run
+- method: GET
+  url: /api/auth-check
+- method: GET
+  url: ${BASE_URL}/api/gateway/sessions
+- method: GET
+  url: /api/gateway/sessions
+- method: GET
+  url: /api/tasks
+- method: GET
+  url: /api/tasks/${id}
+- method: POST
+  url: /api/tasks
+- method: PATCH
+  url: /api/tasks/${id}
+- method: DELETE
+  url: /api/tasks/${id}
+- method: GET
+  url: /api/sessions
+- method: GET
+  url: /api/history?${query.toString()}
+- method: GET
+  url: /api/ping
+- method: GET
+  url: /api/history?sessionKey=${encodeURIComponent(sessionKey)}&limit=50
+- method: GET
+  url: /api/profiles/list
+- method: GET
+  url: /api/profiles/create
+- method: GET
+  url: /api/profiles/update
+- method: GET
+  url: /api/profiles/delete
+- method: POST
+  url: /api/profiles/create
+- method: POST
+  url: /api/profiles/update
+- method: POST
+  url: /api/profiles/delete
+- method: GET
+  url: /api/chat-events
+- method: GET
+  url: /api/conductor-spawn?missionId=${encodeURIComponent(missionId)}&lines=400
+- method: GET
+  url: /api/history?sessionKey=${encodeURIComponent(sessionKey)}&limit=${limit}
+- method: GET
+  url: /api/send-stream
+- method: GET
+  url: /api/conductor-spawn
+- method: GET
+  url: /api/agent-pause
+- method: GET
+  url: /api/conductor-stop
+- method: POST
+  url: /api/send-stream
+- method: POST
+  url: /api/conductor-spawn
+- method: POST
+  url: /api/agent-pause
+- method: POST
+  url: /api/conductor-stop
+- method: GET
+  url: /api/agent-dispatch
+- method: GET
+  url: /api/sessions/send
+- method: POST
+  url: /api/sessions
+- method: POST
+  url: /api/agent-dispatch
+- method: POST
+  url: /api/sessions/send
+- method: GET
+  url: /api/chat-events?sessionKey=${encodeURIComponent(sessionKey)}
+- method: GET
+  url: /api/profiles/activate
+- method: GET
+  url: /api/workspace
+- method: GET
+  url: /api/paths
+- method: PATCH
+  url: /api/sessions
+- method: GET
+  url: /api/sessions/${encodeURIComponent(sessionKey)}/active-run
+- method: GET
+  url: /api/sessions?${query.toString()}
+- method: GET
+  url: /api/context-usage
+- method: GET
+  url: /api/mcp/presets
+- method: GET
+  url: /api/mcp/hub-sources
+- method: GET
+  url: /api/mcp/hub-sources/${encodeURIComponent(id)}
+- method: POST
+  url: /api/mcp/hub-sources
+- method: GET
+  url: /api/mcp/test
+- method: POST
+  url: /api/mcp/test
+- method: GET
+  url: /api/mcp/hub-search?${params.toString()}
+- method: GET
+  url: ${baseUrl}/presence
+- method: GET
+  url: ${baseUrl}/chat
+- method: POST
+  url: ${baseUrl}/presence
+- method: POST
+  url: ${baseUrl}/chat
+- method: GET
+  url: ${CLAUDE_API}/api/skills
+- method: GET
+  url: ${CLAUDE_API}${endpoint}
+- method: POST
+  url: ${CLAUDE_API}${endpoint}
+- method: GET
+  url: https://portal.nousresearch.com/api/oauth/token
+- method: POST
+  url: https://portal.nousresearch.com/api/oauth/token
+- method: GET
+  url: ${CLAUDE_API}/api/jobs/${params.jobId}
+- method: PATCH
+  url: ${CLAUDE_API}/api/jobs/${params.jobId}
+- method: DELETE
+  url: ${CLAUDE_API}/api/jobs/${params.jobId}
+- method: GET
+  url: https://portal.nousresearch.com/api/oauth/device/code
+- method: POST
+  url: https://portal.nousresearch.com/api/oauth/device/code
+- method: GET
+  url: '${CLAUDE_API}/api/jobs${params ? '
+- method: GET
+  url: ${CLAUDE_API}/api/jobs
+- method: POST
+  url: ${CLAUDE_API}/api/jobs
+- method: GET
+  url: ${gateway}/v1/chat/completions
+- method: POST
+  url: ${gateway}/v1/chat/completions
+- method: GET
+  url: http://127.0.0.1:${port}/
+- method: HEAD
+  url: http://127.0.0.1:${port}/
+- method: GET
+  url: ${workerBaseUrl()}/admin/stats
+- method: GET
+  url: ${CLAUDE_API}/api/tasks?include_done=false
+- method: GET
+  url: ${CLAUDE_API}/api/skills/install
+- method: POST
+  url: ${CLAUDE_API}/api/skills/install
+- method: GET
+  url: ${CLAUDE_API}/api/skills/uninstall
+- method: POST
+  url: ${CLAUDE_API}/api/skills/uninstall
+- method: GET
+  url: ${CLAUDE_API}/api/skills/toggle
+- method: POST
+  url: ${CLAUDE_API}/api/skills/toggle
+- method: GET
+  url: /api/hermesworld/reservations
+- method: POST
+  url: /api/hermesworld/reservations
+- method: GET
+  url: /api/system-metrics
+- method: GET
+  url: /api/start-claude
+- method: POST
+  url: /api/start-claude
+- method: GET
+  url: /api/claude-proxy/health
+- method: GET
+  url: /api/start-agent
+- method: POST
+  url: /api/start-agent
+- method: GET
+  url: /api/update/status
+- method: GET
+  url: '/api/update/${product.id === '
+- method: POST
+  url: '/api/update/${product.id === '
+- method: GET
+  url: /api/playground-npc
+- method: POST
+  url: /api/playground-npc
+- method: GET
+  url: /api/swarm-memory?workerId=${encodeURIComponent(workerId)}&kind=profile
+- method: GET
+  url: /api/swarm-memory?workerId=${encodeURIComponent(workerId)}&kind=episodic
+- method: GET
+  url: /api/claude-tasks
+- method: POST
+  url: /api/claude-tasks
+- method: GET
+  url: /api/models
+- method: GET
+  url: /api/swarm-runtime
+- method: GET
+  url: /api/swarm-health
+- method: GET
+  url: /api/swarm-roster
+- method: GET
+  url: /api/swarm-missions?limit=50
+- method: GET
+  url: /api/swarm-tmux-start
+- method: GET
+  url: /api/swarm-tmux-stop
+- method: GET
+  url: /api/swarm-tmux-scroll
+- method: POST
+  url: /api/swarm-tmux-start
+- method: POST
+  url: /api/swarm-tmux-stop
+- method: POST
+  url: /api/swarm-tmux-scroll
+- method: POST
+  url: /api/swarm-roster
+- method: GET
+  url: /api/swarm-chat?workerId=${encodeURIComponent(workerId)}&limit=30
+- method: GET
+  url: /api/swarm-project?workerId=${encodeURIComponent(workerId)}
+- method: GET
+  url: /api/swarm-kanban
+- method: POST
+  url: /api/swarm-kanban
+- method: PATCH
+  url: /api/swarm-kanban
+- method: GET
+  url: /api/sessions/${encodeURIComponent(resolvedSessionKey)}/active-run
+- method: GET
+  url: /api/session-status
+- method: GET
+  url: /api/model-switch
+- method: POST
+  url: /api/model-switch
+- method: GET
+  url: /api/events
+- method: GET
+  url: /api/files?path=${encodeURIComponent(directoryBrowserPath)}
+- method: GET
+  url: /api/gateway/agents?agentId=${encodeURIComponent(agentId)}
+- method: GET
+  url: /api/gateway/agents
+- method: PATCH
+  url: /api/gateway/agents
+- method: GET
+  url: /api/knowledge/config
+- method: GET
+  url: /api/knowledge/sync
+- method: POST
+  url: /api/knowledge/sync
+- method: POST
+  url: /api/knowledge/config
+- method: GET
+  url: /api/memory/write
+- method: POST
+  url: /api/memory/write
+- method: GET
+  url: /api/claude-config
+- method: GET
+  url: /api/config-get
+- method: GET
+  url: /api/config-patch
+- method: PATCH
+  url: /api/claude-config
+- method: POST
+  url: /api/config-patch
+- method: POST
+  url: /api/claude-config
+- method: GET
+  url: /api/skills?tab=installed&limit=200&summary=search
+- method: GET
+  url: /api/sessions?limit=200&offset=0
+- method: GET
+  url: /api/dashboard/overview?days=${period}&achievements=5
+- method: GET
+  url: /api/workspace/memory-files
+- method: GET
+  url: /api/skills?${params.toString()}
+- method: GET
+  url: /api/skills/hub-search?${params.toString()}
+- method: GET
+  url: /api/vt-capital
+- method: GET
+  url: /api/swarm-dispatch
+- method: POST
+  url: /api/swarm-dispatch
+- method: GET
+  url: /api/files?action=read&path=${encodeURIComponent(path)}
+- method: GET
+  url: /api/files
+- method: GET
+  url: /api/files?action=list&maxDepth=3
+- method: GET
+  url: /api/files?action=download&path=${encodeURIComponent(entry.path)}
+- method: POST
+  url: /api/files
+- method: GET
+  url: /api/dashboard/overview?logs=200
+- method: GET
+  url: /api/dashboard/overview?achievements=12
+- method: GET
+  url: /api/workspace/stats
+- method: GET
+  url: /api/session-status${params}
+- method: GET
+  url: /api/context-usage${fallbackParams}
+- method: GET
+  url: /api/claude-proxy/api/available-models?provider=${encodeURIComponent(normalizedProvider)}
+- method: GET
+  url: /api/claude-proxy/api/config
+- method: GET
+  url: /api/model/info
+- method: PATCH
+  url: /api/claude-proxy/api/config
+- method: POST
+  url: /api/profiles/activate
+- method: POST
+  url: /api/workspace
+- method: GET
+  url: /api/mcp/${encodeURIComponent(server.name)}/logs
+- method: GET
+  url: /api/mcp
+- method: POST
+  url: /api/mcp
+- method: GET
+  url: /ascii-portraits/${id}.txt
+- method: GET
+  url: /avatars-3d/${id}.glb
+- method: HEAD
+  url: /avatars-3d/${id}.glb
+- method: GET
+  url: /api/playground-admin
+- method: GET
+  url: /api/network-url?port=${window.location.port || 3000}
+- method: GET
+  url: /api/auth
+- method: POST
+  url: /api/auth
+- method: GET
+  url: /api/history?${params.toString()}
+- method: GET
+  url: /api/provider-usage
+- method: GET
+  url: /api/cli-agents/${agent.pid}/kill
+- method: POST
+  url: /api/cli-agents/${agent.pid}/kill
+- method: GET
+  url: /api/files?action=list
+- method: GET
+  url: /api/provider-usage?force=1
+- method: GET
+  url: /api/terminal-input
+- method: GET
+  url: /api/terminal-resize
+- method: GET
+  url: /api/debug-analyze
+- method: GET
+  url: /api/terminal-close
+- method: GET
+  url: /api/terminal-stream
+- method: POST
+  url: /api/terminal-input
+- method: POST
+  url: /api/terminal-resize
+- method: POST
+  url: /api/debug-analyze
+- method: POST
+  url: /api/terminal-close
+- method: POST
+  url: /api/terminal-stream
+- method: GET
+  url: /api/oauth/device-code
+- method: GET
+  url: /api/oauth/poll-token
+- method: POST
+  url: /api/oauth/device-code
+- method: POST
+  url: /api/oauth/poll-token
+- method: GET
+  url: /api/validate-provider
+- method: POST
+  url: /api/validate-provider
+- method: GET
+  url: /api/memory/list
+- method: GET
+  url: /api/skills
+- method: GET
+  url: /api/claude-proxy/api/available-models?provider=${encodeURIComponent(providerId)}
+- method: GET
+  url: /api/local-providers
+- method: GET
+  url: /api/swarm-decompose
+- method: GET
+  url: /api/swarm-orchestrator-loop
+- method: POST
+  url: /api/swarm-decompose
+- method: POST
+  url: /api/swarm-orchestrator-loop
+- method: GET
+  url: /api/claude-proxy/api/available-models?provider=${encodeURIComponent(provider)}
+- method: GET
+  url: /api/connection-settings
+- method: PUT
+  url: /api/connection-settings
+- method: GET
+  url: /api/hermesworld/reservations/confirm
+- method: POST
+  url: /api/hermesworld/reservations/confirm
+components:
+- api_calls: 0
+  children: []
+  file: src/components/export-menu.tsx
+  jsx_complexity: 0
+  line: 35
+  name: ExportMenu
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/mobile-hamburger-menu.tsx
+  jsx_complexity: 0
+  line: 128
+  name: HamburgerTrigger
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - HugeiconsIcon
+  file: src/components/mobile-hamburger-menu.tsx
+  jsx_complexity: 30
+  line: 147
+  name: MobileHamburgerMenu
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/loading-indicator.tsx
+  jsx_complexity: 0
+  line: 70
+  name: LoadingIndicator
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/orchestrator-avatar.tsx
+  jsx_complexity: 0
+  line: 84
+  name: GreekPNG
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/orchestrator-avatar.tsx
+  jsx_complexity: 0
+  line: 190
+  name: LobsterSVG
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/orchestrator-avatar.tsx
+  jsx_complexity: 0
+  line: 431
+  name: ClawCatSVG
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/orchestrator-avatar.tsx
+  jsx_complexity: 0
+  line: 645
+  name: RobotSVG
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/orchestrator-avatar.tsx
+  jsx_complexity: 0
+  line: 731
+  name: FoxSVG
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/orchestrator-avatar.tsx
+  jsx_complexity: 0
+  line: 825
+  name: WolfSVG
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/orchestrator-avatar.tsx
+  jsx_complexity: 0
+  line: 965
+  name: OwlSVG
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/orchestrator-avatar.tsx
+  jsx_complexity: 0
+  line: 1027
+  name: GhostSVG
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/orchestrator-avatar.tsx
+  jsx_complexity: 0
+  line: 1113
+  name: OctopusSVG
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/orchestrator-avatar.tsx
+  jsx_complexity: 0
+  line: 1246
+  name: DragonSVG
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/orchestrator-avatar.tsx
+  jsx_complexity: 0
+  line: 1430
+  name: PandaSVG
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/orchestrator-avatar.tsx
+  jsx_complexity: 0
+  line: 1602
+  name: AvatarPicker
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/orchestrator-avatar.tsx
+  jsx_complexity: 0
+  line: 1699
+  name: OrchestratorAvatarComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/system-metrics-footer.tsx
+  jsx_complexity: 0
+  line: 67
+  name: MetricItem
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/system-metrics-footer.tsx
+  jsx_complexity: 1
+  line: 95
+  name: Separator
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/system-metrics-footer.tsx
+  jsx_complexity: 0
+  line: 99
+  name: StatusDot
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/system-metrics-footer.tsx
+  jsx_complexity: 0
+  line: 114
+  name: SystemMetricsFooter
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-avatar.tsx
+  jsx_complexity: 0
+  line: 107
+  name: AgentAvatar
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/context-meter.tsx
+  jsx_complexity: 0
+  line: 30
+  name: ContextMeter
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/global-shortcut-listener.tsx
+  jsx_complexity: 0
+  line: 3
+  name: GlobalShortcutListener
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - AnimatePresence
+  file: src/components/keyboard-shortcuts-modal.tsx
+  jsx_complexity: 20
+  line: 39
+  name: KeyboardShortcutsModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/terminal-shortcut-listener.tsx
+  jsx_complexity: 0
+  line: 4
+  name: TerminalShortcutListener
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/workflow-help-modal.tsx
+  jsx_complexity: 0
+  line: 11
+  name: WorkflowHelpModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/empty-state.tsx
+  jsx_complexity: 0
+  line: 15
+  name: EmptyState
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/connection-startup-screen.tsx
+  jsx_complexity: 0
+  line: 58
+  name: ConnectionStartupScreen
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/claude-reconnect-banner.tsx
+  jsx_complexity: 0
+  line: 34
+  name: ClaudeReconnectBanner
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/manage-modes-modal.tsx
+  jsx_complexity: 0
+  line: 12
+  name: ManageModesModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-card.tsx
+  jsx_complexity: 0
+  line: 73
+  name: StatusIndicator
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-card.tsx
+  jsx_complexity: 0
+  line: 107
+  name: AgentCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/mobile-page-header.tsx
+  jsx_complexity: 0
+  line: 15
+  name: MobilePageHeader
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/backend-unavailable-state.tsx
+  jsx_complexity: 0
+  line: 9
+  name: BackendUnavailableState
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/save-mode-dialog.tsx
+  jsx_complexity: 0
+  line: 11
+  name: SaveModeDialog
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/feature-not-ready.tsx
+  jsx_complexity: 0
+  line: 26
+  name: FeatureNotReady
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - HugeiconsIcon
+  - HTMLElement
+  file: src/components/mobile-tab-bar.tsx
+  jsx_complexity: 18
+  line: 136
+  name: MobileTabBar
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/apply-mode-dialog.tsx
+  jsx_complexity: 0
+  line: 10
+  name: ApplyModeDialog
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/logo-loader.tsx
+  jsx_complexity: 0
+  line: 9
+  name: LogoLoader
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/workspace-shell.tsx
+  jsx_complexity: 0
+  line: 60
+  name: WorkspaceShell
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/theme-toggle.tsx
+  jsx_complexity: 0
+  line: 27
+  name: ThemeToggle
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/mode-selector.tsx
+  jsx_complexity: 0
+  line: 19
+  name: ModeSelector
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/rename-mode-dialog.tsx
+  jsx_complexity: 0
+  line: 11
+  name: RenameDialog
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/provider-logo.tsx
+  jsx_complexity: 0
+  line: 29
+  name: ProviderLogo
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/model-suggestion-toast.tsx
+  jsx_complexity: 0
+  line: 21
+  name: ModelSuggestionToast
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - HugeiconsIcon
+  - TooltipTrigger
+  - TooltipRoot
+  - TooltipProvider
+  - AnimatePresence
+  - TooltipContent
+  - Button
+  file: src/components/chat-panel-toggle.tsx
+  jsx_complexity: 10
+  line: 17
+  name: ChatPanelToggle
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/command-palette.tsx
+  jsx_complexity: 0
+  line: 107
+  name: CommandPalette
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 2
+  children:
+  - Record
+  - ProductId
+  - AnimatePresence
+  - Notes
+  - UpdateCard
+  - UpdateStatus
+  - ReleaseNotes
+  - Set
+  file: src/components/update-center-notifier.tsx
+  jsx_complexity: 14
+  line: 127
+  name: UpdateCenterNotifier
+  props: 0
+  state_count: 1
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/update-center-notifier.tsx
+  jsx_complexity: 0
+  line: 257
+  name: UpdateCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/update-center-notifier.tsx
+  jsx_complexity: 0
+  line: 425
+  name: ReleaseNotes
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/provider-model-icon.tsx
+  jsx_complexity: 0
+  line: 51
+  name: ProviderModelIcon
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - HTMLDivElement
+  - TerminalWorkspace
+  - Suspense
+  - AnimatePresence
+  file: src/components/terminal-panel.tsx
+  jsx_complexity: 9
+  line: 18
+  name: TerminalPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/error-toast.tsx
+  jsx_complexity: 0
+  line: 66
+  name: ToastItem
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - Array
+  - ToastItem
+  - ErrorEntry
+  file: src/components/error-toast.tsx
+  jsx_complexity: 5
+  line: 102
+  name: ErrorToastContainer
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/status-indicator.tsx
+  jsx_complexity: 3
+  line: 97
+  name: StatusDot
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/status-indicator.tsx
+  jsx_complexity: 0
+  line: 122
+  name: StatusIndicator
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/connection-overlay.tsx
+  jsx_complexity: 0
+  line: 10
+  name: ConnectionProvider
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 1
+  children:
+  - HugeiconsIcon
+  - TooltipTrigger
+  - TooltipRoot
+  - TooltipProvider
+  - SessionMeta
+  - AnimatePresence
+  - ChatScreen
+  - TooltipContent
+  - Button
+  file: src/components/chat-panel.tsx
+  jsx_complexity: 29
+  line: 28
+  name: ChatPanel
+  props: 0
+  state_count: 1
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/claude-health-banner.tsx
+  jsx_complexity: 0
+  line: 10
+  name: ClaudeHealthBanner
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/dashboard-overflow-panel.tsx
+  jsx_complexity: 0
+  line: 45
+  name: OverflowGrid
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/dashboard-overflow-panel.tsx
+  jsx_complexity: 0
+  line: 81
+  name: DashboardOverflowPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/mobile-sessions-panel.tsx
+  jsx_complexity: 0
+  line: 52
+  name: MobileSessionsPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/attachment-preview.tsx
+  jsx_complexity: 0
+  line: 32
+  name: AttachmentPreview
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/attachment-preview.tsx
+  jsx_complexity: 0
+  line: 136
+  name: AttachmentPreviewList
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/attachment-button.tsx
+  jsx_complexity: 0
+  line: 184
+  name: AttachmentButton
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/slash-command-menu.tsx
+  jsx_complexity: 0
+  line: 44
+  name: SlashCommandMenu
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/logs-tail-card.tsx
+  jsx_complexity: 0
+  line: 33
+  name: LogsTailCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/logs-tail-card.tsx
+  jsx_complexity: 0
+  line: 147
+  name: LogsModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/model-info-card.tsx
+  jsx_complexity: 0
+  line: 41
+  name: ModelInfoCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/model-info-card.tsx
+  jsx_complexity: 0
+  line: 210
+  name: CapabilityChip
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/model-info-card.tsx
+  jsx_complexity: 0
+  line: 239
+  name: ModelInventoryModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/analytics-chart-card.tsx
+  jsx_complexity: 0
+  line: 69
+  name: AnalyticsChartCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/analytics-chart-card.tsx
+  jsx_complexity: 0
+  line: 323
+  name: PeriodSwitch
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/analytics-chart-card.tsx
+  jsx_complexity: 0
+  line: 366
+  name: Legend
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/analytics-chart-card.tsx
+  jsx_complexity: 0
+  line: 382
+  name: AnalyticsModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/analytics-hero-card.tsx
+  jsx_complexity: 0
+  line: 70
+  name: AnalyticsHeroCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/analytics-hero-card.tsx
+  jsx_complexity: 0
+  line: 335
+  name: LegendDot
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/analytics-hero-card.tsx
+  jsx_complexity: 0
+  line: 351
+  name: AnalyticsModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/token-mix-hour-card.tsx
+  jsx_complexity: 0
+  line: 39
+  name: TokenMixHourCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/cost-ledger-card.tsx
+  jsx_complexity: 0
+  line: 56
+  name: CostLedgerCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/skills-usage-card.tsx
+  jsx_complexity: 0
+  line: 16
+  name: SkillsUsageCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/analytics-summary-card.tsx
+  jsx_complexity: 0
+  line: 27
+  name: AnalyticsSummaryCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/operator-tip-card.tsx
+  jsx_complexity: 0
+  line: 201
+  name: OperatorTipCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/ops-strip.tsx
+  jsx_complexity: 0
+  line: 84
+  name: OpsStrip
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/edit-mode-panel.tsx
+  jsx_complexity: 0
+  line: 20
+  name: EditModePanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/edit-mode-panel.tsx
+  jsx_complexity: 0
+  line: 92
+  name: Group
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/sessions-intelligence-card.tsx
+  jsx_complexity: 0
+  line: 151
+  name: SessionsIntelligenceCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/velocity-card.tsx
+  jsx_complexity: 0
+  line: 45
+  name: VelocityCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/active-model-kpi.tsx
+  jsx_complexity: 0
+  line: 21
+  name: ActiveModelKpi
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/attention-card.tsx
+  jsx_complexity: 0
+  line: 31
+  name: AttentionCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/provider-mix-card.tsx
+  jsx_complexity: 0
+  line: 81
+  name: ProviderMixCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/cache-efficiency-card.tsx
+  jsx_complexity: 0
+  line: 27
+  name: CacheEfficiencyCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/hour-of-day-card.tsx
+  jsx_complexity: 0
+  line: 16
+  name: HourOfDayCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/token-mix-card.tsx
+  jsx_complexity: 0
+  line: 29
+  name: TokenMixCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/widget-shell.tsx
+  jsx_complexity: 0
+  line: 23
+  name: WidgetShell
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/attention-marquee.tsx
+  jsx_complexity: 0
+  line: 34
+  name: AttentionMarquee
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/top-models-card.tsx
+  jsx_complexity: 0
+  line: 28
+  name: TopModelsCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/achievements-card.tsx
+  jsx_complexity: 0
+  line: 31
+  name: AchievementRow
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/achievements-card.tsx
+  jsx_complexity: 0
+  line: 96
+  name: AchievementsCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/hero-metrics.tsx
+  jsx_complexity: 0
+  line: 32
+  name: Spark
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/hero-metrics.tsx
+  jsx_complexity: 0
+  line: 98
+  name: HeroTile
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/dashboard/components/hero-metrics.tsx
+  jsx_complexity: 0
+  line: 193
+  name: HeroMetrics
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/settings/components/provider-icon.tsx
+  jsx_complexity: 0
+  line: 34
+  name: ProviderIcon
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/settings/components/provider-wizard.tsx
+  jsx_complexity: 0
+  line: 147
+  name: ProviderWizard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agents/components/operations-agent-card.tsx
+  jsx_complexity: 0
+  line: 67
+  name: OperationsInlineChat
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agents/components/operations-agent-card.tsx
+  jsx_complexity: 0
+  line: 169
+  name: OperationsAgentCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agents/components/operations-settings-modal.tsx
+  jsx_complexity: 0
+  line: 35
+  name: ModelSelector
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agents/components/operations-settings-modal.tsx
+  jsx_complexity: 0
+  line: 119
+  name: OperationsSettingsModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agents/components/operations-agent-detail.tsx
+  jsx_complexity: 0
+  line: 44
+  name: ModelSelector
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agents/components/operations-agent-detail.tsx
+  jsx_complexity: 0
+  line: 155
+  name: OperationsAgentDetail
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agents/components/operations-new-agent-modal.tsx
+  jsx_complexity: 0
+  line: 62
+  name: ModelSelector
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agents/components/operations-new-agent-modal.tsx
+  jsx_complexity: 0
+  line: 133
+  name: OperationsNewAgentModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agents/components/operations-agent-chat.tsx
+  jsx_complexity: 0
+  line: 10
+  name: OperationsAgentChat
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agents/components/full-outputs-view.tsx
+  jsx_complexity: 0
+  line: 104
+  name: FilterPill
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agents/components/full-outputs-view.tsx
+  jsx_complexity: 0
+  line: 134
+  name: OutputCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - HugeiconsIcon
+  - OutputCard
+  - AgentOutputFilter
+  - AnimatePresence
+  - Button
+  - FilterPill
+  file: src/screens/agents/components/full-outputs-view.tsx
+  jsx_complexity: 19
+  line: 335
+  name: FullOutputsView
+  props: 0
+  state_count: 1
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agents/components/orchestrator-card.tsx
+  jsx_complexity: 0
+  line: 16
+  name: OrchestratorCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agents/components/operations-agent-jobs.tsx
+  jsx_complexity: 0
+  line: 19
+  name: OperationsAgentJobs
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/config-wizards.tsx
+  jsx_complexity: 0
+  line: 91
+  name: ProviderLogo
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/config-wizards.tsx
+  jsx_complexity: 0
+  line: 268
+  name: WizardModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/config-wizards.tsx
+  jsx_complexity: 0
+  line: 312
+  name: FieldLabel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/config-wizards.tsx
+  jsx_complexity: 0
+  line: 337
+  name: AgentWizardModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/config-wizards.tsx
+  jsx_complexity: 0
+  line: 532
+  name: TeamIconPicker
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/config-wizards.tsx
+  jsx_complexity: 0
+  line: 583
+  name: TeamWizardModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/config-wizards.tsx
+  jsx_complexity: 0
+  line: 794
+  name: AddTeamModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/config-wizards.tsx
+  jsx_complexity: 0
+  line: 1078
+  name: ProviderEditModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/agent-avatar.tsx
+  jsx_complexity: 0
+  line: 64
+  name: AgentAvatar
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/streaming-text.tsx
+  jsx_complexity: 0
+  line: 48
+  name: StreamingText
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 1
+  children:
+  - Array
+  - Map
+  - SessionRecord
+  - FilterTab
+  - FeedRow
+  file: src/screens/gateway/components/live-feed-panel.tsx
+  jsx_complexity: 30
+  line: 154
+  name: LiveFeedPanel
+  props: 0
+  state_count: 1
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/mission-timeline.tsx
+  jsx_complexity: 0
+  line: 29
+  name: MissionTimeline
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/agent-chat-panel.tsx
+  jsx_complexity: 0
+  line: 64
+  name: AgentChatPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/remote-agents-panel.tsx
+  jsx_complexity: 0
+  line: 65
+  name: RemoteAgentsPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/office-view.tsx
+  jsx_complexity: 0
+  line: 237
+  name: DeskSVG
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/office-view.tsx
+  jsx_complexity: 0
+  line: 292
+  name: CoffeeMachineSVG
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/office-view.tsx
+  jsx_complexity: 0
+  line: 305
+  name: WaterCoolerSVG
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/office-view.tsx
+  jsx_complexity: 0
+  line: 317
+  name: SnackBarSVG
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/office-view.tsx
+  jsx_complexity: 0
+  line: 327
+  name: PlantSVG
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/office-view.tsx
+  jsx_complexity: 0
+  line: 358
+  name: RemoteSessionCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/office-view.tsx
+  jsx_complexity: 0
+  line: 420
+  name: OfficeView
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/run-console.tsx
+  jsx_complexity: 0
+  line: 192
+  name: RunConsole
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/task-board.tsx
+  jsx_complexity: 0
+  line: 116
+  name: TaskBoard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/template-picker.tsx
+  jsx_complexity: 0
+  line: 62
+  name: TemplatePicker
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/template-picker.tsx
+  jsx_complexity: 0
+  line: 165
+  name: TemplateCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/team-panel.tsx
+  jsx_complexity: 0
+  line: 154
+  name: TeamPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/agent-output-panel.tsx
+  jsx_complexity: 0
+  line: 222
+  name: AgentOutputPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/mission-event-log.tsx
+  jsx_complexity: 0
+  line: 123
+  name: MissionEventLog
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/approvals-page.tsx
+  jsx_complexity: 0
+  line: 112
+  name: ApprovalsPage
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/calendar-view.tsx
+  jsx_complexity: 0
+  line: 210
+  name: CalendarView
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/presence-indicator.tsx
+  jsx_complexity: 0
+  line: 46
+  name: PresenceIndicator
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/run-learnings.tsx
+  jsx_complexity: 0
+  line: 66
+  name: RunLearnings
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/kanban-board.tsx
+  jsx_complexity: 0
+  line: 125
+  name: KanbanBoard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/run-compare.tsx
+  jsx_complexity: 0
+  line: 93
+  name: RunCompare
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/run-compare.tsx
+  jsx_complexity: 0
+  line: 175
+  name: MetricRow
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/reusable-snippets.tsx
+  jsx_complexity: 0
+  line: 20
+  name: ReusableSnippets
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/approvals-panel.tsx
+  jsx_complexity: 0
+  line: 90
+  name: ApprovalsPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/approvals-panel.tsx
+  jsx_complexity: 0
+  line: 309
+  name: ApprovalCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/agenda-view.tsx
+  jsx_complexity: 0
+  line: 146
+  name: SectionCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/agenda-view.tsx
+  jsx_complexity: 0
+  line: 205
+  name: AgendaView
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/export-mission.tsx
+  jsx_complexity: 0
+  line: 77
+  name: ExportMissionButton
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/inline-approval-card.tsx
+  jsx_complexity: 0
+  line: 11
+  name: InlineApprovalCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/approvals-bell.tsx
+  jsx_complexity: 0
+  line: 22
+  name: ApprovalsBell
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/live-activity-panel.tsx
+  jsx_complexity: 0
+  line: 78
+  name: AgentCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/live-activity-panel.tsx
+  jsx_complexity: 0
+  line: 259
+  name: LiveActivityPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/cost-analytics.tsx
+  jsx_complexity: 0
+  line: 43
+  name: CSSBarChart
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/cost-analytics.tsx
+  jsx_complexity: 0
+  line: 67
+  name: CostAnalyticsDashboard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - PresenceMessage
+  - BroadcastChannel
+  - Record
+  file: src/screens/gateway/components/collaboration-presence.tsx
+  jsx_complexity: 11
+  line: 79
+  name: CollaborationPresence
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/overview-tab.tsx
+  jsx_complexity: 0
+  line: 38
+  name: OverviewTab
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/agents-working-panel.tsx
+  jsx_complexity: 0
+  line: 108
+  name: SpinnerIcon
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/agents-working-panel.tsx
+  jsx_complexity: 0
+  line: 122
+  name: AgentRow
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/agents-working-panel.tsx
+  jsx_complexity: 0
+  line: 299
+  name: AgentCompactCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/gateway/components/agents-working-panel.tsx
+  jsx_complexity: 0
+  line: 364
+  name: AgentsWorkingPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/chat-message-list.tsx
+  jsx_complexity: 0
+  line: 114
+  name: ToolCallCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/chat-message-list.tsx
+  jsx_complexity: 0
+  line: 189
+  name: ThinkingBubble
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/chat-message-list.tsx
+  jsx_complexity: 0
+  line: 565
+  name: ChatMessageListComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - HugeiconsIcon
+  file: src/screens/chat/components/chat-sidebar.tsx
+  jsx_complexity: 3
+  line: 69
+  name: ThemeToggleMini
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/chat-sidebar.tsx
+  jsx_complexity: 0
+  line: 169
+  name: NavItem
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/chat-sidebar.tsx
+  jsx_complexity: 0
+  line: 360
+  name: SectionLabel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/chat-sidebar.tsx
+  jsx_complexity: 0
+  line: 444
+  name: CollapsibleSection
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/chat-sidebar.tsx
+  jsx_complexity: 0
+  line: 519
+  name: ChatSidebarComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/chat-empty-state.tsx
+  jsx_complexity: 0
+  line: 43
+  name: ChatEmptyState
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/providers-dialog.tsx
+  jsx_complexity: 0
+  line: 18
+  name: ProvidersDialog
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/context-meter.tsx
+  jsx_complexity: 0
+  line: 15
+  name: ContextMeterComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/context-bar.tsx
+  jsx_complexity: 0
+  line: 33
+  name: ContextBarComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/message-timestamp.tsx
+  jsx_complexity: 0
+  line: 43
+  name: MessageTimestamp
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/message-status.tsx
+  jsx_complexity: 0
+  line: 14
+  name: MessageStatus
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/tui-activity-card.tsx
+  jsx_complexity: 0
+  line: 84
+  name: ToolRow
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/tui-activity-card.tsx
+  jsx_complexity: 0
+  line: 253
+  name: ThinkingRow
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/tui-activity-card.tsx
+  jsx_complexity: 0
+  line: 328
+  name: TuiActivityCardComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/message-item.tsx
+  jsx_complexity: 0
+  line: 927
+  name: ToolCallPill
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/message-item.tsx
+  jsx_complexity: 0
+  line: 1144
+  name: LifecycleEventCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/message-item.tsx
+  jsx_complexity: 0
+  line: 1247
+  name: MarkdownDocumentCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/message-item.tsx
+  jsx_complexity: 0
+  line: 1336
+  name: MarkdownAttachmentCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/message-item.tsx
+  jsx_complexity: 0
+  line: 1361
+  name: MarkdownMessageCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/message-item.tsx
+  jsx_complexity: 0
+  line: 1434
+  name: ArtifactPreviewBody
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/message-item.tsx
+  jsx_complexity: 0
+  line: 1470
+  name: InlineArtifactCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/message-item.tsx
+  jsx_complexity: 0
+  line: 1547
+  name: InlineToolSectionItem
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/message-item.tsx
+  jsx_complexity: 0
+  line: 1878
+  name: ToolCallGroup
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/message-item.tsx
+  jsx_complexity: 0
+  line: 1970
+  name: MessageItemComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/chat-composer.tsx
+  jsx_complexity: 0
+  line: 787
+  name: ChatComposerComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/chat-header.tsx
+  jsx_complexity: 0
+  line: 109
+  name: ChatHeaderComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/command-session.tsx
+  jsx_complexity: 0
+  line: 55
+  name: CommandSessionDialog
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/message-actions-bar.tsx
+  jsx_complexity: 0
+  line: 49
+  name: MessageActionsBar
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/connection-status-message.tsx
+  jsx_complexity: 0
+  line: 87
+  name: ConnectionStatusMessage
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/research-card.tsx
+  jsx_complexity: 0
+  line: 4
+  name: ResearchCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/scroll-to-bottom-button.tsx
+  jsx_complexity: 0
+  line: 16
+  name: ScrollToBottomButton
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/sidebar/session-item.tsx
+  jsx_complexity: 0
+  line: 99
+  name: SessionItemComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/sidebar/session-delete-dialog.tsx
+  jsx_complexity: 0
+  line: 20
+  name: SessionDeleteDialog
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/sidebar/session-rename-dialog.tsx
+  jsx_complexity: 0
+  line: 21
+  name: SessionRenameDialog
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/chat/components/sidebar/sidebar-sessions.tsx
+  jsx_complexity: 0
+  line: 35
+  name: SidebarSessions
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/mcp/components/mcp-server-dialog.tsx
+  jsx_complexity: 0
+  line: 64
+  name: McpServerDialog
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/mcp/components/mcp-server-card.tsx
+  jsx_complexity: 0
+  line: 29
+  name: Badge
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/mcp/components/mcp-server-card.tsx
+  jsx_complexity: 0
+  line: 45
+  name: McpServerCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/mcp/components/mcp-logs-drawer.tsx
+  jsx_complexity: 0
+  line: 18
+  name: McpLogsDrawer
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/mcp/components/sources-manager-dialog.tsx
+  jsx_complexity: 0
+  line: 61
+  name: SourceForm
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/mcp/components/sources-manager-dialog.tsx
+  jsx_complexity: 0
+  line: 219
+  name: SourceRow
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/mcp/components/sources-manager-dialog.tsx
+  jsx_complexity: 0
+  line: 270
+  name: SourcesManagerDialog
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/mcp/components/install-confirmation-dialog.tsx
+  jsx_complexity: 0
+  line: 95
+  name: InstallConfirmationDialog
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-chat.tsx
+  jsx_complexity: 0
+  line: 23
+  name: PlaygroundChat
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-chat.tsx
+  jsx_complexity: 0
+  line: 168
+  name: FilterButton
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-actionbar.tsx
+  jsx_complexity: 0
+  line: 90
+  name: PlaygroundActionBar
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-actionbar.tsx
+  jsx_complexity: 0
+  line: 218
+  name: Pip
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/speech-bubble.tsx
+  jsx_complexity: 1
+  line: 65
+  name: SpeechBubbleStyles
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/speech-bubble.tsx
+  jsx_complexity: 0
+  line: 83
+  name: SpeechBubble
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/fps-counter.tsx
+  jsx_complexity: 0
+  line: 5
+  name: FpsCounter
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/quest-dialog-panel.tsx
+  jsx_complexity: 0
+  line: 26
+  name: QuestDialogPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - MapPanel
+  - FounderVaultPanel
+  - QuestDialogPanel
+  - InventoryPanel
+  file: src/screens/playground/components/wave-chat-panels-showcase.tsx
+  jsx_complexity: 15
+  line: 6
+  name: WaveChatPanelsShowcase
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-sidepanel.tsx
+  jsx_complexity: 0
+  line: 74
+  name: PlaygroundSidePanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-sidepanel.tsx
+  jsx_complexity: 0
+  line: 287
+  name: InventoryTab
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-sidepanel.tsx
+  jsx_complexity: 0
+  line: 455
+  name: FoundersVaultPlaceholder
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-sidepanel.tsx
+  jsx_complexity: 0
+  line: 532
+  name: SkillsTab
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-sidepanel.tsx
+  jsx_complexity: 0
+  line: 594
+  name: QuestsTab
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-sidepanel.tsx
+  jsx_complexity: 0
+  line: 654
+  name: WorldsTab
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-sidepanel.tsx
+  jsx_complexity: 0
+  line: 708
+  name: SettingsTab
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 19
+  name: PineTree
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 38
+  name: BroadleafTree
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 62
+  name: GrassTuft
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 108
+  name: ContactShadow
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 118
+  name: Rock
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 128
+  name: StoneArch
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 148
+  name: Townsfolk
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 189
+  name: MarketStall
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 232
+  name: Building
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 323
+  name: Lantern
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 347
+  name: Banner
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 363
+  name: Flower
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 379
+  name: FlowerPatch
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 400
+  name: LogPile
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 420
+  name: Fountain
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 466
+  name: PathStrip
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 482
+  name: PlazaDisc
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 498
+  name: ClockTower
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 517
+  name: Signpost
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 528
+  name: Bench
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 538
+  name: TrainingRing
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 547
+  name: RaisedDais
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 557
+  name: CrystalCluster
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 566
+  name: EnergyCore
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-environment.tsx
+  jsx_complexity: 0
+  line: 579
+  name: ScatteredScenery
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/inventory-panel.tsx
+  jsx_complexity: 0
+  line: 39
+  name: InventoryPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-hud.tsx
+  jsx_complexity: 0
+  line: 66
+  name: PlaygroundHud
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-hud.tsx
+  jsx_complexity: 0
+  line: 209
+  name: ResourceOrb
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/player-character.tsx
+  jsx_complexity: 10
+  line: 15
+  name: PlayerCharacter
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/toast.tsx
+  jsx_complexity: 1
+  line: 54
+  name: ToastStyles
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/toast.tsx
+  jsx_complexity: 0
+  line: 66
+  name: Toast
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-customizer.tsx
+  jsx_complexity: 0
+  line: 30
+  name: PlaygroundCustomizer
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-customizer.tsx
+  jsx_complexity: 0
+  line: 151
+  name: Section
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-customizer.tsx
+  jsx_complexity: 0
+  line: 160
+  name: Swatches
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-customizer.tsx
+  jsx_complexity: 1
+  line: 180
+  name: Toggles
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-customizer.tsx
+  jsx_complexity: 0
+  line: 202
+  name: PreviewSvg
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-glb-body.tsx
+  jsx_complexity: 0
+  line: 64
+  name: GlbInner
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-glb-body.tsx
+  jsx_complexity: 0
+  line: 89
+  name: OptionalGlbBody
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-npc-glb.tsx
+  jsx_complexity: 0
+  line: 23
+  name: PlaygroundNpcGlb
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-online-chip.tsx
+  jsx_complexity: 0
+  line: 31
+  name: STATS_URL
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-online-chip.tsx
+  jsx_complexity: 0
+  line: 34
+  name: PlaygroundOnlineChip
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-dialog.tsx
+  jsx_complexity: 0
+  line: 44
+  name: PlaygroundDialog
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-journal.tsx
+  jsx_complexity: 0
+  line: 5
+  name: PlaygroundJournal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-player-glb.tsx
+  jsx_complexity: 0
+  line: 17
+  name: PlaygroundPlayerGlb
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 216
+  name: Ground
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 271
+  name: Monster
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 333
+  name: ClassicalPillars
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 384
+  name: TechPillars
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 428
+  name: ForestDecor
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 473
+  name: TempleDecor
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 519
+  name: ForgeSuperFurnace
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 550
+  name: MemoryTree
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 565
+  name: OracleRingTower
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 585
+  name: FloatCrystal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 603
+  name: ArenaDecor
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 661
+  name: TrainingDecor
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 766
+  name: PathRibbon
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 800
+  name: HermesStatue
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 898
+  name: PracticeDummy
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 933
+  name: WeaponRack
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 979
+  name: HermesBanner
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 1027
+  name: Brazier
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 1058
+  name: WorldDecor
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 1070
+  name: NpcAccessories
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 1222
+  name: NPC
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 1409
+  name: Portal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 1481
+  name: QuestZone
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 1553
+  name: PlayerAndCamera
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 2155
+  name: SummonedFamiliar
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - Html
+  - SpeechBubble
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 3
+  line: 2201
+  name: SelfChatBubble
+  props: 0
+  state_count: 1
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 2248
+  name: BotPlayer
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 2404
+  name: DoorTrigger
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 2445
+  name: InteriorScene
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 2514
+  name: ExitTrigger
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 2556
+  name: InteriorExitButton
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 2588
+  name: InteriorRoom
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 2616
+  name: TavernProps
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 2626
+  name: BankProps
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 2635
+  name: SmithyProps
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 2645
+  name: InnProps
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 2661
+  name: ApothecaryProps
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 2676
+  name: GuildProps
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 2689
+  name: RemotePlayer
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 2764
+  name: Scene
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-world-3d.tsx
+  jsx_complexity: 0
+  line: 3060
+  name: PlaygroundWorld3D
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/keyboard-shortcuts-overlay.tsx
+  jsx_complexity: 11
+  line: 30
+  name: KeyboardShortcutsOverlay
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/settings-panel.tsx
+  jsx_complexity: 0
+  line: 19
+  name: SettingsPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/settings-panel.tsx
+  jsx_complexity: 0
+  line: 130
+  name: Section
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/settings-panel.tsx
+  jsx_complexity: 0
+  line: 134
+  name: Select
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/settings-panel.tsx
+  jsx_complexity: 0
+  line: 138
+  name: Range
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/settings-panel.tsx
+  jsx_complexity: 0
+  line: 142
+  name: Check
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/photosensitive-warning-splash.tsx
+  jsx_complexity: 0
+  line: 8
+  name: PhotosensitiveWarningSplash
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/npc-character.tsx
+  jsx_complexity: 0
+  line: 16
+  name: NpcCharacter
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/founder-vault-panel.tsx
+  jsx_complexity: 0
+  line: 24
+  name: FounderVaultPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-minimap.tsx
+  jsx_complexity: 0
+  line: 52
+  name: PlaygroundMinimap
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-map.tsx
+  jsx_complexity: 0
+  line: 31
+  name: PlaygroundMap
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - HTMLCanvasElement
+  file: src/screens/playground/components/playground-hero-canvas.tsx
+  jsx_complexity: 10
+  line: 8
+  name: PlaygroundHeroCanvas
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/map-panel.tsx
+  jsx_complexity: 0
+  line: 26
+  name: MapPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 1
+  children:
+  - SectionTitle
+  - StatCard
+  - HealthPill
+  - EmptyState
+  - AdminStats
+  file: src/screens/playground/components/playground-admin-panel.tsx
+  jsx_complexity: 69
+  line: 68
+  name: PlaygroundAdminPanel
+  props: 0
+  state_count: 2
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-admin-panel.tsx
+  jsx_complexity: 0
+  line: 232
+  name: SectionTitle
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-admin-panel.tsx
+  jsx_complexity: 0
+  line: 241
+  name: StatCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-admin-panel.tsx
+  jsx_complexity: 0
+  line: 250
+  name: HealthPill
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/playground/components/playground-admin-panel.tsx
+  jsx_complexity: 0
+  line: 259
+  name: EmptyState
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agora/components/agora-avatar.tsx
+  jsx_complexity: 0
+  line: 27
+  name: AgoraAvatar
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agora/components/agora-online-panel.tsx
+  jsx_complexity: 0
+  line: 19
+  name: AgoraOnlinePanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agora/components/agora-chat-panel.tsx
+  jsx_complexity: 0
+  line: 14
+  name: AgoraChatPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agora/components/agora-world.tsx
+  jsx_complexity: 0
+  line: 24
+  name: AgoraWorld
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/screens/agora/components/agora-profile-drawer.tsx
+  jsx_complexity: 0
+  line: 41
+  name: AgoraProfileDrawer
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - BaseCollapsible
+  file: src/components/ui/collapsible.tsx
+  jsx_complexity: 2
+  line: 7
+  name: Collapsible
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/collapsible.tsx
+  jsx_complexity: 0
+  line: 11
+  name: CollapsibleTrigger
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/collapsible.tsx
+  jsx_complexity: 0
+  line: 32
+  name: CollapsiblePanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/three-dots-spinner.tsx
+  jsx_complexity: 0
+  line: 10
+  name: ThreeDotsSpinner
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/braille-spinner.tsx
+  jsx_complexity: 0
+  line: 124
+  name: BrailleSpinnerComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - Array
+  - ToastItem
+  file: src/components/ui/toast.tsx
+  jsx_complexity: 7
+  line: 51
+  name: Toaster
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/switch.tsx
+  jsx_complexity: 0
+  line: 19
+  name: Switch
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/button.tsx
+  jsx_complexity: 0
+  line: 47
+  name: Button
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/menu.tsx
+  jsx_complexity: 0
+  line: 8
+  name: MenuRoot
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/menu.tsx
+  jsx_complexity: 0
+  line: 14
+  name: MenuTrigger
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/menu.tsx
+  jsx_complexity: 0
+  line: 25
+  name: MenuContent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/menu.tsx
+  jsx_complexity: 0
+  line: 59
+  name: MenuItem
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - CommandDialogPrimitive
+  file: src/components/ui/command.tsx
+  jsx_complexity: 1
+  line: 26
+  name: CommandDialogTrigger
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/command.tsx
+  jsx_complexity: 0
+  line: 35
+  name: CommandDialogBackdrop
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/command.tsx
+  jsx_complexity: 0
+  line: 51
+  name: CommandDialogViewport
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/command.tsx
+  jsx_complexity: 0
+  line: 67
+  name: CommandDialogPopup
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/command.tsx
+  jsx_complexity: 0
+  line: 96
+  name: Command
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/command.tsx
+  jsx_complexity: 0
+  line: 112
+  name: CommandInput
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/command.tsx
+  jsx_complexity: 0
+  line: 136
+  name: CommandList
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/command.tsx
+  jsx_complexity: 0
+  line: 149
+  name: CommandEmpty
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/command.tsx
+  jsx_complexity: 0
+  line: 162
+  name: CommandPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/command.tsx
+  jsx_complexity: 0
+  line: 175
+  name: CommandGroup
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/command.tsx
+  jsx_complexity: 0
+  line: 188
+  name: CommandGroupLabel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/command.tsx
+  jsx_complexity: 0
+  line: 201
+  name: CommandCollection
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/command.tsx
+  jsx_complexity: 0
+  line: 207
+  name: CommandItem
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/command.tsx
+  jsx_complexity: 0
+  line: 220
+  name: CommandSeparator
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/command.tsx
+  jsx_complexity: 0
+  line: 233
+  name: CommandShortcut
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/command.tsx
+  jsx_complexity: 0
+  line: 247
+  name: CommandFooter
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/dialog.tsx
+  jsx_complexity: 0
+  line: 9
+  name: DialogRoot
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/dialog.tsx
+  jsx_complexity: 0
+  line: 15
+  name: DialogTrigger
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/dialog.tsx
+  jsx_complexity: 0
+  line: 25
+  name: DialogContent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/dialog.tsx
+  jsx_complexity: 0
+  line: 57
+  name: DialogTitle
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/dialog.tsx
+  jsx_complexity: 0
+  line: 69
+  name: DialogDescription
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/dialog.tsx
+  jsx_complexity: 0
+  line: 83
+  name: DialogClose
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/preview-card.tsx
+  jsx_complexity: 0
+  line: 12
+  name: PreviewCardTrigger
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/preview-card.tsx
+  jsx_complexity: 0
+  line: 27
+  name: PreviewCardPopup
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/input.tsx
+  jsx_complexity: 0
+  line: 17
+  name: Input
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/autocomplete.tsx
+  jsx_complexity: 0
+  line: 18
+  name: AutocompleteInput
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/autocomplete.tsx
+  jsx_complexity: 0
+  line: 85
+  name: AutocompletePopup
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/autocomplete.tsx
+  jsx_complexity: 0
+  line: 134
+  name: AutocompleteItem
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/autocomplete.tsx
+  jsx_complexity: 0
+  line: 154
+  name: AutocompleteSeparator
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/autocomplete.tsx
+  jsx_complexity: 0
+  line: 167
+  name: AutocompleteGroup
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/autocomplete.tsx
+  jsx_complexity: 0
+  line: 180
+  name: AutocompleteGroupLabel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/autocomplete.tsx
+  jsx_complexity: 0
+  line: 194
+  name: AutocompleteEmpty
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/autocomplete.tsx
+  jsx_complexity: 0
+  line: 211
+  name: AutocompleteRow
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/autocomplete.tsx
+  jsx_complexity: 0
+  line: 224
+  name: AutocompleteValue
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/autocomplete.tsx
+  jsx_complexity: 0
+  line: 230
+  name: AutocompleteList
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/autocomplete.tsx
+  jsx_complexity: 0
+  line: 253
+  name: AutocompleteClear
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/autocomplete.tsx
+  jsx_complexity: 0
+  line: 271
+  name: AutocompleteStatus
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/autocomplete.tsx
+  jsx_complexity: 0
+  line: 288
+  name: AutocompleteCollection
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/autocomplete.tsx
+  jsx_complexity: 0
+  line: 299
+  name: AutocompleteTrigger
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/scroll-area.tsx
+  jsx_complexity: 0
+  line: 8
+  name: ScrollAreaRoot
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/scroll-area.tsx
+  jsx_complexity: 0
+  line: 22
+  name: ScrollAreaViewport
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/scroll-area.tsx
+  jsx_complexity: 0
+  line: 38
+  name: ScrollAreaScrollbar
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/scroll-area.tsx
+  jsx_complexity: 0
+  line: 57
+  name: ScrollAreaThumb
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/scroll-area.tsx
+  jsx_complexity: 0
+  line: 71
+  name: ScrollAreaCorner
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/alert-dialog.tsx
+  jsx_complexity: 0
+  line: 9
+  name: AlertDialogRoot
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/alert-dialog.tsx
+  jsx_complexity: 0
+  line: 15
+  name: AlertDialogTrigger
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/alert-dialog.tsx
+  jsx_complexity: 0
+  line: 24
+  name: AlertDialogContent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/alert-dialog.tsx
+  jsx_complexity: 0
+  line: 53
+  name: AlertDialogTitle
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/alert-dialog.tsx
+  jsx_complexity: 0
+  line: 67
+  name: AlertDialogDescription
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/alert-dialog.tsx
+  jsx_complexity: 0
+  line: 82
+  name: AlertDialogCancel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/alert-dialog.tsx
+  jsx_complexity: 0
+  line: 93
+  name: AlertDialogAction
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/tooltip.tsx
+  jsx_complexity: 0
+  line: 8
+  name: TooltipProvider
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/tooltip.tsx
+  jsx_complexity: 0
+  line: 16
+  name: TooltipRoot
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/tooltip.tsx
+  jsx_complexity: 0
+  line: 22
+  name: TooltipTrigger
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/tooltip.tsx
+  jsx_complexity: 0
+  line: 32
+  name: TooltipContent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/tabs.tsx
+  jsx_complexity: 0
+  line: 9
+  name: Tabs
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/tabs.tsx
+  jsx_complexity: 0
+  line: 22
+  name: TabsList
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/tabs.tsx
+  jsx_complexity: 0
+  line: 57
+  name: TabsTab
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/ui/tabs.tsx
+  jsx_complexity: 0
+  line: 70
+  name: TabsPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/memory-viewer/MemoryPreview.tsx
+  jsx_complexity: 0
+  line: 17
+  name: MemoryPreview
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/memory-viewer/MemoryEditor.tsx
+  jsx_complexity: 0
+  line: 42
+  name: MemoryEditor
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/memory-viewer/MemorySearch.tsx
+  jsx_complexity: 0
+  line: 14
+  name: MemorySearch
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/memory-viewer/MemoryFileList.tsx
+  jsx_complexity: 0
+  line: 51
+  name: MemoryFileList
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/memory-viewer/MemoryFileList.tsx
+  jsx_complexity: 0
+  line: 192
+  name: MemoryRow
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/mobile-prompt/MobileSetupModal.tsx
+  jsx_complexity: 10
+  line: 16
+  name: TailscaleIcon
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/mobile-prompt/MobileSetupModal.tsx
+  jsx_complexity: 0
+  line: 32
+  name: MobileSetupModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - AnimatePresence
+  - MobileSetupModal
+  - HugeiconsIcon
+  file: src/components/mobile-prompt/MobilePromptTrigger.tsx
+  jsx_complexity: 31
+  line: 9
+  name: MobilePromptTrigger
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 1
+  children: []
+  file: src/components/auth/login-screen.tsx
+  jsx_complexity: 19
+  line: 4
+  name: LoginScreen
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-view/steer-modal.tsx
+  jsx_complexity: 0
+  line: 19
+  name: SteerModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-view/agent-card.tsx
+  jsx_complexity: 0
+  line: 167
+  name: AgentCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-view/guardrails-modal.tsx
+  jsx_complexity: 0
+  line: 56
+  name: GuardrailsModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-view/agent-stream-panel.tsx
+  jsx_complexity: 0
+  line: 96
+  name: AgentStreamPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-view/agent-registry-card.tsx
+  jsx_complexity: 0
+  line: 58
+  name: AgentRegistryCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-view/agent-progress.tsx
+  jsx_complexity: 0
+  line: 27
+  name: AgentProgress
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-view/agent-view-panel.tsx
+  jsx_complexity: 0
+  line: 199
+  name: OrchestratorCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 1
+  children:
+  - OrchestratorCard
+  - DOMRect
+  - ScrollAreaViewport
+  - AgentCard
+  - Collapsible
+  - ScrollAreaThumb
+  - AnimatePresence
+  - MiniAgentCard
+  - HTMLParagraphElement
+  - CollapsiblePanel
+  - ScrollAreaCorner
+  - LayoutGroup
+  - Button
+  - CollapsibleTrigger
+  - InspectorPanel
+  - HTMLDivElement
+  - HugeiconsIcon
+  - ScrollAreaRoot
+  - InspectorToggleButton
+  - AgentChatModal
+  - ScrollAreaScrollbar
+  file: src/components/agent-view/agent-view-panel.tsx
+  jsx_complexity: 112
+  line: 567
+  name: AgentViewPanel
+  props: 0
+  state_count: 2
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-view/kill-confirm-dialog.tsx
+  jsx_complexity: 0
+  line: 20
+  name: KillConfirmDialog
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-view/swarm-connection-overlay.tsx
+  jsx_complexity: 0
+  line: 39
+  name: SwarmConnectionOverlay
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/file-explorer/file-preview-dialog.tsx
+  jsx_complexity: 0
+  line: 45
+  name: FilePreviewDialog
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/file-explorer/file-explorer-sidebar.tsx
+  jsx_complexity: 0
+  line: 117
+  name: FileExplorerSidebar
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/tool-indicator.tsx
+  jsx_complexity: 0
+  line: 20
+  name: ToolIndicator
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/message.tsx
+  jsx_complexity: 0
+  line: 16
+  name: Message
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/message.tsx
+  jsx_complexity: 0
+  line: 32
+  name: MessageAvatar
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/message.tsx
+  jsx_complexity: 0
+  line: 56
+  name: MessageContent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/message.tsx
+  jsx_complexity: 0
+  line: 83
+  name: MessageActions
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/message.tsx
+  jsx_complexity: 0
+  line: 105
+  name: MessageAction
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/text-shimmer.tsx
+  jsx_complexity: 0
+  line: 12
+  name: TextShimmer
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/chat-container.tsx
+  jsx_complexity: 0
+  line: 30
+  name: ChatContainerRoot
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/chat-container.tsx
+  jsx_complexity: 0
+  line: 142
+  name: ChatContainerContent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/chat-container.tsx
+  jsx_complexity: 0
+  line: 162
+  name: ChatContainerScrollAnchor
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 99
+  name: CodeComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 119
+  name: PreComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 122
+  name: H1Component
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 129
+  name: H2Component
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 151
+  name: H3Component
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 173
+  name: H4Component
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 180
+  name: H5Component
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 187
+  name: H6Component
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 194
+  name: PComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 199
+  name: UlComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 206
+  name: OlComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 213
+  name: LiComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 216
+  name: AComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 228
+  name: BlockquoteComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 235
+  name: StrongComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 238
+  name: EmComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 1
+  line: 241
+  name: HrComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 244
+  name: TableComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 260
+  name: TheadComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 273
+  name: TbodyComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 285
+  name: TrComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 296
+  name: ThComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 311
+  name: TdComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 328
+  name: TfootComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 338
+  name: MarkdownBlock
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/markdown.tsx
+  jsx_complexity: 0
+  line: 361
+  name: MarkdownComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/scroll-button.tsx
+  jsx_complexity: 0
+  line: 18
+  name: ScrollButton
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/prompt-input.tsx
+  jsx_complexity: 0
+  line: 103
+  name: PromptInput
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/prompt-input.tsx
+  jsx_complexity: 0
+  line: 186
+  name: PromptInputTextarea
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/prompt-input.tsx
+  jsx_complexity: 0
+  line: 337
+  name: PromptInputActions
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/prompt-input.tsx
+  jsx_complexity: 0
+  line: 356
+  name: PromptInputAction
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/thinking.tsx
+  jsx_complexity: 0
+  line: 17
+  name: Thinking
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/typing-indicator.tsx
+  jsx_complexity: 0
+  line: 13
+  name: TypingIndicator
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/tool.tsx
+  jsx_complexity: 0
+  line: 30
+  name: Tool
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/thinking-indicator.tsx
+  jsx_complexity: 0
+  line: 20
+  name: ThinkingIndicator
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/usage-meter/context-alert-modal.tsx
+  jsx_complexity: 0
+  line: 14
+  name: ContextAlertModalComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/usage-meter/context-alert-modal.tsx
+  jsx_complexity: 0
+  line: 162
+  name: Recommendation
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 2
+  children:
+  - StatsView
+  - Array
+  - UsageDetailsModal
+  - DialogRoot
+  - DialogContent
+  - MenuTrigger
+  - UsageSummary
+  - ProviderUsageEntry
+  - AgentActivity
+  - ContextAlertModal
+  - MenuRoot
+  - MenuItem
+  - MenuContent
+  file: src/components/usage-meter/usage-meter.tsx
+  jsx_complexity: 70
+  line: 437
+  name: UsageMeter
+  props: 0
+  state_count: 8
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/usage-meter/usage-details-modal.tsx
+  jsx_complexity: 0
+  line: 119
+  name: ProviderLineRenderer
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/usage-meter/usage-details-modal.tsx
+  jsx_complexity: 0
+  line: 269
+  name: UsageDetailsModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 2
+  children:
+  - UsageRow
+  - ProviderUsageEntry
+  - ReturnType
+  file: src/components/usage-meter/usage-meter-compact.tsx
+  jsx_complexity: 23
+  line: 124
+  name: UsageMeterCompact
+  props: 0
+  state_count: 5
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/terminal/terminal-workspace.tsx
+  jsx_complexity: 0
+  line: 113
+  name: TerminalWorkspace
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - HugeiconsIcon
+  - HTMLInputElement
+  file: src/components/terminal/mobile-terminal-input.tsx
+  jsx_complexity: 8
+  line: 22
+  name: MobileTerminalInput
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/terminal/debug-panel.tsx
+  jsx_complexity: 0
+  line: 22
+  name: DebugPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/terminal/terminal-panel.tsx
+  jsx_complexity: 0
+  line: 39
+  name: TerminalPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/terminal/terminal-panel.tsx
+  jsx_complexity: 0
+  line: 499
+  name: TerminalView
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 8
+  children:
+  - Array
+  - ReturnType
+  - AnimatePresence
+  - GatewayStatusResponse
+  - ProviderLogo
+  - Step
+  file: src/components/onboarding/claude-onboarding.tsx
+  jsx_complexity: 148
+  line: 133
+  name: ClaudeOnboarding
+  props: 0
+  state_count: 6
+  type: component
+- api_calls: 0
+  children:
+  - AnimatePresence
+  - HugeiconsIcon
+  - Button
+  file: src/components/onboarding/onboarding-wizard.tsx
+  jsx_complexity: 29
+  line: 17
+  name: OnboardingWizard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/onboarding/setup-step-content.tsx
+  jsx_complexity: 0
+  line: 30
+  name: ConnectionCheckStep
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/onboarding/setup-step-content.tsx
+  jsx_complexity: 0
+  line: 156
+  name: ModelConfigurationStep
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - Styles
+  - Joyride
+  file: src/components/onboarding/onboarding-tour.tsx
+  jsx_complexity: 2
+  line: 28
+  name: OnboardingTour
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/onboarding/provider-select-step.tsx
+  jsx_complexity: 0
+  line: 29
+  name: AnthropicLogo
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/onboarding/provider-select-step.tsx
+  jsx_complexity: 0
+  line: 37
+  name: OpenRouterLogo
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/onboarding/provider-select-step.tsx
+  jsx_complexity: 0
+  line: 54
+  name: GoogleLogo
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/onboarding/provider-select-step.tsx
+  jsx_complexity: 0
+  line: 77
+  name: OpenAILogo
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/onboarding/provider-select-step.tsx
+  jsx_complexity: 0
+  line: 135
+  name: ProviderSelectStep
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/search/search-result-item.tsx
+  jsx_complexity: 0
+  line: 45
+  name: SearchResultItem
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/search/quick-actions.tsx
+  jsx_complexity: 0
+  line: 17
+  name: QuickActions
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/search/search-input.tsx
+  jsx_complexity: 0
+  line: 13
+  name: SearchInput
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/search/search-results.tsx
+  jsx_complexity: 0
+  line: 14
+  name: SearchResults
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - HugeiconsIcon
+  - Array
+  - SearchResultItemData
+  - QuickActions
+  - AnimatePresence
+  - QuickAction
+  - HTMLInputElement
+  - SearchResults
+  - SearchInput
+  file: src/components/search/search-modal.tsx
+  jsx_complexity: 35
+  line: 55
+  name: SearchModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/settings/settings-sidebar.tsx
+  jsx_complexity: 0
+  line: 68
+  name: SettingsSidebar
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/settings/settings-sidebar.tsx
+  jsx_complexity: 0
+  line: 102
+  name: SettingsMobilePills
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/avatars/assistant-avatar.tsx
+  jsx_complexity: 0
+  line: 12
+  name: AssistantAvatarComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/avatars/user-avatar.tsx
+  jsx_complexity: 0
+  line: 15
+  name: UserAvatarComponent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/inspector/inspector-panel.tsx
+  jsx_complexity: 0
+  line: 50
+  name: LoadingState
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - EmptyState
+  file: src/components/inspector/inspector-panel.tsx
+  jsx_complexity: 7
+  line: 67
+  name: ArtifactsTab
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/inspector/inspector-panel.tsx
+  jsx_complexity: 0
+  line: 100
+  name: ErrorState
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/inspector/inspector-panel.tsx
+  jsx_complexity: 0
+  line: 110
+  name: EmptyState
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - HTMLDivElement
+  - EmptyState
+  file: src/components/inspector/inspector-panel.tsx
+  jsx_complexity: 7
+  line: 122
+  name: ActivityTab
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - EmptyState
+  file: src/components/inspector/inspector-panel.tsx
+  jsx_complexity: 4
+  line: 165
+  name: FilesTab
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 1
+  children:
+  - LoadingState
+  - Array
+  - EmptyState
+  - ErrorState
+  file: src/components/inspector/inspector-panel.tsx
+  jsx_complexity: 12
+  line: 212
+  name: MemoryTab
+  props: 0
+  state_count: 1
+  type: component
+- api_calls: 1
+  children:
+  - Array
+  - EmptyState
+  - SkillItem
+  - LoadingState
+  - ErrorState
+  file: src/components/inspector/inspector-panel.tsx
+  jsx_complexity: 18
+  line: 286
+  name: SkillsTab
+  props: 0
+  state_count: 2
+  type: component
+- api_calls: 1
+  children:
+  - Array
+  - EmptyState
+  - McpInspectorServer
+  - LoadingState
+  - ErrorState
+  file: src/components/inspector/inspector-panel.tsx
+  jsx_complexity: 14
+  line: 391
+  name: McpTab
+  props: 0
+  state_count: 1
+  type: component
+- api_calls: 0
+  children:
+  - HTMLPreElement
+  file: src/components/inspector/inspector-panel.tsx
+  jsx_complexity: 6
+  line: 471
+  name: LogsTab
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/inspector/inspector-panel.tsx
+  jsx_complexity: 0
+  line: 510
+  name: InspectorPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/inspector/inspector-panel.tsx
+  jsx_complexity: 0
+  line: 642
+  name: InspectorToggleButton
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/settings-dialog/settings-dialog.tsx
+  jsx_complexity: 0
+  line: 105
+  name: SectionHeader
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/settings-dialog/settings-dialog.tsx
+  jsx_complexity: 0
+  line: 127
+  name: Row
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 5
+  children:
+  - Array
+  - Record
+  - Switch
+  - ProviderLogo
+  - BackendUnavailableState
+  file: src/components/settings-dialog/settings-dialog.tsx
+  jsx_complexity: 90
+  line: 252
+  name: HermesContent
+  props: 0
+  state_count: 2
+  type: component
+- api_calls: 0
+  children:
+  - HugeiconsIcon
+  - EnterpriseThemePicker
+  - Row
+  - Switch
+  - SectionHeader
+  file: src/components/settings-dialog/settings-dialog.tsx
+  jsx_complexity: 13
+  line: 933
+  name: AppearanceContent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/settings-dialog/settings-dialog.tsx
+  jsx_complexity: 0
+  line: 1112
+  name: ThemeSwatch
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - HugeiconsIcon
+  - ThemeSwatch
+  file: src/components/settings-dialog/settings-dialog.tsx
+  jsx_complexity: 15
+  line: 1152
+  name: EnterpriseThemePicker
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/settings-dialog/settings-dialog.tsx
+  jsx_complexity: 0
+  line: 1271
+  name: Preview
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - Switch
+  - SectionHeader
+  - Row
+  file: src/components/settings-dialog/settings-dialog.tsx
+  jsx_complexity: 18
+  line: 1318
+  name: ChatContent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - Switch
+  - SectionHeader
+  - Row
+  file: src/components/settings-dialog/settings-dialog.tsx
+  jsx_complexity: 9
+  line: 1412
+  name: NotificationsContent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 2
+  children:
+  - SectionHeader
+  - Record
+  - Row
+  file: src/components/settings-dialog/settings-dialog.tsx
+  jsx_complexity: 17
+  line: 1600
+  name: AgentBehaviorContent
+  props: 0
+  state_count: 1
+  type: component
+- api_calls: 3
+  children:
+  - Array
+  - Record
+  - Row
+  - Switch
+  - SectionHeader
+  file: src/components/settings-dialog/settings-dialog.tsx
+  jsx_complexity: 20
+  line: 1689
+  name: SmartRoutingContent
+  props: 0
+  state_count: 1
+  type: component
+- api_calls: 3
+  children:
+  - Record
+  - Row
+  - Switch
+  - SectionHeader
+  - Input
+  file: src/components/settings-dialog/settings-dialog.tsx
+  jsx_complexity: 37
+  line: 1801
+  name: VoiceContent
+  props: 0
+  state_count: 1
+  type: component
+- api_calls: 2
+  children:
+  - Switch
+  - SectionHeader
+  - Record
+  - Row
+  file: src/components/settings-dialog/settings-dialog.tsx
+  jsx_complexity: 22
+  line: 1972
+  name: DisplayContent
+  props: 0
+  state_count: 1
+  type: component
+- api_calls: 0
+  children:
+  - SectionHeader
+  - Row
+  file: src/components/settings-dialog/settings-dialog.tsx
+  jsx_complexity: 6
+  line: 2064
+  name: LanguageContent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/settings-dialog/settings-dialog.tsx
+  jsx_complexity: 0
+  line: 2116
+  name: SettingsDialog
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-chat/AgentChatInput.tsx
+  jsx_complexity: 0
+  line: 14
+  name: AgentChatInput
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-chat/AgentChatMessages.tsx
+  jsx_complexity: 0
+  line: 21
+  name: AgentChatMessages
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-chat/AgentChatHeader.tsx
+  jsx_complexity: 0
+  line: 26
+  name: AgentChatHeader
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-chat/AgentChatModal.tsx
+  jsx_complexity: 0
+  line: 73
+  name: AgentChatModal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/pixel-avatar.tsx
+  jsx_complexity: 0
+  line: 33
+  name: Eyes
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/pixel-avatar.tsx
+  jsx_complexity: 0
+  line: 123
+  name: PixelAvatar
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/isometric-office.tsx
+  jsx_complexity: 4
+  line: 25
+  name: CheckeredFloor
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/isometric-office.tsx
+  jsx_complexity: 0
+  line: 48
+  name: Desk
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/isometric-office.tsx
+  jsx_complexity: 6
+  line: 77
+  name: MeetingTable
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/isometric-office.tsx
+  jsx_complexity: 4
+  line: 111
+  name: WaterCooler
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/isometric-office.tsx
+  jsx_complexity: 4
+  line: 127
+  name: CoffeeMachine
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/isometric-office.tsx
+  jsx_complexity: 7
+  line: 143
+  name: LunchArea
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/isometric-office.tsx
+  jsx_complexity: 0
+  line: 163
+  name: Plant
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/isometric-office.tsx
+  jsx_complexity: 2
+  line: 179
+  name: Clock
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/isometric-office.tsx
+  jsx_complexity: 0
+  line: 193
+  name: ChatLine
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/isometric-office.tsx
+  jsx_complexity: 0
+  line: 219
+  name: AnimatedAgent
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/isometric-office.tsx
+  jsx_complexity: 5
+  line: 315
+  name: EmptyOffice
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/isometric-office.tsx
+  jsx_complexity: 2
+  line: 336
+  name: AmbientParticles
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/isometric-office.tsx
+  jsx_complexity: 0
+  line: 368
+  name: IsometricOffice
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/agent-character.tsx
+  jsx_complexity: 0
+  line: 42
+  name: AgentCharacter
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/activity-panel.tsx
+  jsx_complexity: 0
+  line: 61
+  name: AgentRosterItem
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/activity-panel.tsx
+  jsx_complexity: 0
+  line: 120
+  name: ActivityFeedItem
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/agent-swarm/activity-panel.tsx
+  jsx_complexity: 0
+  line: 158
+  name: ActivityPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/swarm/swarm-compose.tsx
+  jsx_complexity: 0
+  line: 32
+  name: SwarmCompose
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/swarm/swarm-health-strip.tsx
+  jsx_complexity: 0
+  line: 55
+  name: SwarmHealthStrip
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/swarm/swarm-health-strip.tsx
+  jsx_complexity: 0
+  line: 212
+  name: HealthTile
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/swarm/agent-card.tsx
+  jsx_complexity: 0
+  line: 138
+  name: AgentCard
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/swarm/swarm-node-chat.tsx
+  jsx_complexity: 0
+  line: 55
+  name: SwarmNodeChat
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/swarm/standalone-runtime-pane.tsx
+  jsx_complexity: 0
+  line: 39
+  name: TuiPill
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/swarm/standalone-runtime-pane.tsx
+  jsx_complexity: 0
+  line: 62
+  name: StandaloneRuntimePane
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/swarm/widget-rail.tsx
+  jsx_complexity: 0
+  line: 85
+  name: WidgetRail
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/swarm/widget-rail.tsx
+  jsx_complexity: 0
+  line: 307
+  name: RailPanel
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/swarm/widget-rail.tsx
+  jsx_complexity: 0
+  line: 363
+  name: MiniStat
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/swarm/widget-rail.tsx
+  jsx_complexity: 0
+  line: 387
+  name: Stat
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/swarm/topology-band.tsx
+  jsx_complexity: 0
+  line: 52
+  name: TopologyBand
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/swarm/swarm-terminal.tsx
+  jsx_complexity: 0
+  line: 41
+  name: SwarmTerminal
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/swarm/router-chat.tsx
+  jsx_complexity: 0
+  line: 83
+  name: RouterChat
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/swarm/router-chat.tsx
+  jsx_complexity: 0
+  line: 598
+  name: RouterClosedDock
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/swarm/router-chat.tsx
+  jsx_complexity: 0
+  line: 631
+  name: ModeToggle
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children: []
+  file: src/components/prompt-kit/code-block/index.tsx
+  jsx_complexity: 0
+  line: 31
+  name: CodeBlock
+  props: 0
+  state_count: 0
+  type: component
+- api_calls: 0
+  children:
+  - SkillsScreen
+  - BackendUnavailableState
+  file: src/routes/skills.tsx
+  jsx_complexity: 2
+  line: 13
+  name: SkillsRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - Conductor
+  file: src/routes/conductor.tsx
+  jsx_complexity: 1
+  line: 4
+  name: ConductorRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - Suspense
+  - Tabs
+  - RouteLoadingState
+  - MemoryBrowserScreen
+  - TabsList
+  - KnowledgeBrowserScreen
+  - TabsPanel
+  - BackendUnavailableState
+  - TabsTab
+  file: src/routes/memory.tsx
+  jsx_complexity: 16
+  line: 21
+  name: MemoryRoute
+  props: 0
+  state_count: 1
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/memory.tsx
+  jsx_complexity: 0
+  line: 80
+  name: RouteLoadingState
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - Swarm2Screen
+  file: src/routes/swarm2.tsx
+  jsx_complexity: 1
+  line: 7
+  name: Swarm2Route
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/swarm2.tsx
+  jsx_complexity: 0
+  line: 11
+  name: Swarm2Error
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/swarm2.tsx
+  jsx_complexity: 4
+  line: 32
+  name: Swarm2Pending
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - HermesWorldLanding
+  file: src/routes/world.tsx
+  jsx_complexity: 1
+  line: 10
+  name: WorldRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - Swarm2Screen
+  file: src/routes/swarm.tsx
+  jsx_complexity: 1
+  line: 7
+  name: SwarmRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/swarm.tsx
+  jsx_complexity: 0
+  line: 11
+  name: SwarmError
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/swarm.tsx
+  jsx_complexity: 4
+  line: 31
+  name: SwarmPending
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - OperationsScreen
+  file: src/routes/operations.tsx
+  jsx_complexity: 1
+  line: 7
+  name: OperationsRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/operations.tsx
+  jsx_complexity: 0
+  line: 11
+  name: OperationsError
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/operations.tsx
+  jsx_complexity: 4
+  line: 31
+  name: OperationsPending
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - DashboardScreen
+  file: src/routes/dashboard.tsx
+  jsx_complexity: 1
+  line: 10
+  name: DashboardRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - HermesWorldEmbed
+  file: src/routes/playground.tsx
+  jsx_complexity: 1
+  line: 10
+  name: PlaygroundRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - McpScreen
+  - BackendUnavailableState
+  file: src/routes/mcp.tsx
+  jsx_complexity: 2
+  line: 13
+  name: McpRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/__root.tsx
+  jsx_complexity: 0
+  line: 191
+  name: RootError
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 1
+  children:
+  - AuthStatus
+  - ClaudeOnboarding
+  - MobilePromptTrigger
+  - Outlet
+  - UsageMeter
+  - WorkspaceShell
+  - SearchModal
+  - LoginScreen
+  - KeyboardShortcutsModal
+  - Toaster
+  - QueryClientProvider
+  - TerminalShortcutListener
+  - ErrorBoundary
+  - GlobalShortcutListener
+  - OnboardingTour
+  - UpdateCenterNotifier
+  file: src/routes/__root.tsx
+  jsx_complexity: 19
+  line: 260
+  name: RootLayout
+  props: 0
+  state_count: 2
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/__root.tsx
+  jsx_complexity: 0
+  line: 397
+  name: RootDocument
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - AgoraScreen
+  file: src/routes/agora.tsx
+  jsx_complexity: 1
+  line: 10
+  name: AgoraRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/early-access.tsx
+  jsx_complexity: 28
+  line: 12
+  name: EarlyAccessRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - HugeiconsIcon
+  - Link
+  file: src/routes/$.tsx
+  jsx_complexity: 22
+  line: 11
+  name: NotFoundPage
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/files.tsx
+  jsx_complexity: 0
+  line: 22
+  name: FilesError
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/files.tsx
+  jsx_complexity: 4
+  line: 42
+  name: FilesPending
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - HugeiconsIcon
+  - FileExplorerSidebar
+  - Editor
+  file: src/routes/files.tsx
+  jsx_complexity: 12
+  line: 54
+  name: FilesRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/index.tsx
+  jsx_complexity: 0
+  line: 11
+  name: IndexRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - VtCapitalScreen
+  file: src/routes/vt-capital.tsx
+  jsx_complexity: 1
+  line: 7
+  name: VtCapitalRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - ProfilesScreen
+  - CrewScreen
+  file: src/routes/profiles.tsx
+  jsx_complexity: 8
+  line: 12
+  name: ProfilesRoute
+  props: 0
+  state_count: 1
+  type: page
+- api_calls: 2
+  children:
+  - HTMLFormElement
+  - StatCard
+  - Field
+  - SubmitState
+  - CounterState
+  file: src/routes/reserve.tsx
+  jsx_complexity: 36
+  line: 22
+  name: ReserveRoute
+  props: 0
+  state_count: 2
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/reserve.tsx
+  jsx_complexity: 0
+  line: 218
+  name: Field
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/reserve.tsx
+  jsx_complexity: 0
+  line: 256
+  name: StatCard
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/terminal.tsx
+  jsx_complexity: 0
+  line: 14
+  name: TerminalError
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/terminal.tsx
+  jsx_complexity: 0
+  line: 36
+  name: TerminalRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - Outlet
+  file: src/routes/settings.tsx
+  jsx_complexity: 1
+  line: 5
+  name: SettingsLayoutRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - HermesWorldLanding
+  file: src/routes/hermes-world.tsx
+  jsx_complexity: 1
+  line: 10
+  name: HermesWorldRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - TasksScreen
+  file: src/routes/tasks.tsx
+  jsx_complexity: 1
+  line: 16
+  name: TasksRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - JobsScreen
+  - BackendUnavailableState
+  file: src/routes/jobs.tsx
+  jsx_complexity: 2
+  line: 10
+  name: JobsRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/chat/index.tsx
+  jsx_complexity: 0
+  line: 21
+  name: ChatIndexRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/chat/$sessionKey.tsx
+  jsx_complexity: 0
+  line: 19
+  name: ChatError
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - Suspense
+  - ErrorBoundary
+  - ChatScreen
+  file: src/routes/chat/$sessionKey.tsx
+  jsx_complexity: 6
+  line: 55
+  name: ChatRoute
+  props: 0
+  state_count: 1
+  type: page
+- api_calls: 0
+  children:
+  - ProvidersScreen
+  file: src/routes/settings/providers.tsx
+  jsx_complexity: 1
+  line: 7
+  name: SettingsProvidersRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/settings/index.tsx
+  jsx_complexity: 0
+  line: 66
+  name: PageThemeSwatch
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - PageThemeSwatch
+  - ThemeId
+  file: src/routes/settings/index.tsx
+  jsx_complexity: 9
+  line: 202
+  name: WorkspaceThemePicker
+  props: 0
+  state_count: 1
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/settings/index.tsx
+  jsx_complexity: 0
+  line: 255
+  name: SettingsSection
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/settings/index.tsx
+  jsx_complexity: 0
+  line: 280
+  name: SettingsRow
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 1
+  children:
+  - ClaudeConfigSection
+  - HugeiconsIcon
+  - ChatDisplaySection
+  - SettingsMobilePills
+  - ConnectionSection
+  - SettingsSection
+  - Switch
+  - SettingsRow
+  - SettingsSidebar
+  - WorkspaceThemePicker
+  file: src/routes/settings/index.tsx
+  jsx_complexity: 64
+  line: 300
+  name: SettingsRoute
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children:
+  - SettingsSection
+  - Switch
+  - SettingsRow
+  file: src/routes/settings/index.tsx
+  jsx_complexity: 17
+  line: 776
+  name: ChatDisplaySection
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/settings/index.tsx
+  jsx_complexity: 0
+  line: 909
+  name: LoaderPreview
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/settings/index.tsx
+  jsx_complexity: 0
+  line: 997
+  name: ClaudeConfigSection
+  props: 0
+  state_count: 0
+  type: page
+- api_calls: 3
+  children:
+  - SettingsSection
+  - ConnectionSettings
+  - SettingsRow
+  - Button
+  file: src/routes/settings/index.tsx
+  jsx_complexity: 19
+  line: 2047
+  name: ConnectionSection
+  props: 0
+  state_count: 2
+  type: page
+- api_calls: 1
+  children: []
+  file: src/routes/reserve/confirm.tsx
+  jsx_complexity: 9
+  line: 10
+  name: ReserveConfirmRoute
+  props: 0
+  state_count: 1
+  type: page
+- api_calls: 0
+  children: []
+  file: src/routes/api/playground-npc.ts
+  jsx_complexity: 0
+  line: 92
+  name: FALLBACK
+  props: 0
+  state_count: 0
+  type: page
+framework: react
+migration_order:
+- ExportMenu
+- HamburgerTrigger
+- HugeiconsIcon
+- MobileHamburgerMenu
+- LoadingIndicator
+- GreekPNG
+- LobsterSVG
+- ClawCatSVG
+- RobotSVG
+- FoxSVG
+- WolfSVG
+- OwlSVG
+- GhostSVG
+- OctopusSVG
+- DragonSVG
+- PandaSVG
+- AvatarPicker
+- OrchestratorAvatarComponent
+- MetricItem
+- Separator
+- StatusDot
+- SystemMetricsFooter
+- AgentAvatar
+- ContextMeter
+- GlobalShortcutListener
+- AnimatePresence
+- KeyboardShortcutsModal
+- TerminalShortcutListener
+- WorkflowHelpModal
+- EmptyState
+- ConnectionStartupScreen
+- ClaudeReconnectBanner
+- ManageModesModal
+- StatusIndicator
+- AgentCard
+- MobilePageHeader
+- BackendUnavailableState
+- SaveModeDialog
+- FeatureNotReady
+- HTMLElement
+- MobileTabBar
+- ApplyModeDialog
+- LogoLoader
+- WorkspaceShell
+- ThemeToggle
+- ModeSelector
+- RenameDialog
+- ProviderLogo
+- ModelSuggestionToast
+- TooltipTrigger
+- TooltipRoot
+- TooltipProvider
+- TooltipContent
+- Button
+- ChatPanelToggle
+- CommandPalette
+- Record
+- ProductId
+- Notes
+- UpdateCard
+- UpdateStatus
+- ReleaseNotes
+- Set
+- UpdateCenterNotifier
+- ProviderModelIcon
+- TerminalPanel
+- ToastItem
+- Array
+- ErrorEntry
+- ErrorToastContainer
+- ConnectionProvider
+- SessionMeta
+- ChatScreen
+- ChatPanel
+- ClaudeHealthBanner
+- OverflowGrid
+- DashboardOverflowPanel
+- MobileSessionsPanel
+- AttachmentPreview
+- AttachmentPreviewList
+- AttachmentButton
+- SlashCommandMenu
+- LogsTailCard
+- LogsModal
+- ModelInfoCard
+- CapabilityChip
+- ModelInventoryModal
+- AnalyticsChartCard
+- PeriodSwitch
+- Legend
+- AnalyticsModal
+- AnalyticsHeroCard
+- LegendDot
+- TokenMixHourCard
+- CostLedgerCard
+- SkillsUsageCard
+- AnalyticsSummaryCard
+- OperatorTipCard
+- OpsStrip
+- EditModePanel
+- Group
+- SessionsIntelligenceCard
+- VelocityCard
+- ActiveModelKpi
+- AttentionCard
+- ProviderMixCard
+- CacheEfficiencyCard
+- HourOfDayCard
+- TokenMixCard
+- WidgetShell
+- AttentionMarquee
+- TopModelsCard
+- AchievementRow
+- AchievementsCard
+- Spark
+- HeroTile
+- HeroMetrics
+- ProviderIcon
+- ProviderWizard
+- OperationsInlineChat
+- OperationsAgentCard
+- ModelSelector
+- OperationsSettingsModal
+- OperationsAgentDetail
+- OperationsNewAgentModal
+- OperationsAgentChat
+- FilterPill
+- OutputCard
+- AgentOutputFilter
+- FullOutputsView
+- OrchestratorCard
+- OperationsAgentJobs
+- WizardModal
+- FieldLabel
+- AgentWizardModal
+- TeamIconPicker
+- TeamWizardModal
+- AddTeamModal
+- ProviderEditModal
+- StreamingText
+- Map
+- SessionRecord
+- FilterTab
+- FeedRow
+- LiveFeedPanel
+- MissionTimeline
+- AgentChatPanel
+- RemoteAgentsPanel
+- DeskSVG
+- CoffeeMachineSVG
+- WaterCoolerSVG
+- SnackBarSVG
+- PlantSVG
+- RemoteSessionCard
+- OfficeView
+- RunConsole
+- TaskBoard
+- TemplatePicker
+- TemplateCard
+- TeamPanel
+- AgentOutputPanel
+- MissionEventLog
+- ApprovalsPage
+- CalendarView
+- PresenceIndicator
+- RunLearnings
+- KanbanBoard
+- RunCompare
+- MetricRow
+- ReusableSnippets
+- ApprovalsPanel
+- ApprovalCard
+- SectionCard
+- AgendaView
+- ExportMissionButton
+- InlineApprovalCard
+- ApprovalsBell
+- LiveActivityPanel
+- CSSBarChart
+- CostAnalyticsDashboard
+- PresenceMessage
+- BroadcastChannel
+- CollaborationPresence
+- OverviewTab
+- SpinnerIcon
+- AgentRow
+- AgentCompactCard
+- AgentsWorkingPanel
+- ToolCallCard
+- ThinkingBubble
+- ChatMessageListComponent
+- ThemeToggleMini
+- NavItem
+- SectionLabel
+- CollapsibleSection
+- ChatSidebarComponent
+- ChatEmptyState
+- ProvidersDialog
+- ContextMeterComponent
+- ContextBarComponent
+- MessageTimestamp
+- MessageStatus
+- ToolRow
+- ThinkingRow
+- TuiActivityCardComponent
+- ToolCallPill
+- LifecycleEventCard
+- MarkdownDocumentCard
+- MarkdownAttachmentCard
+- MarkdownMessageCard
+- ArtifactPreviewBody
+- InlineArtifactCard
+- InlineToolSectionItem
+- ToolCallGroup
+- MessageItemComponent
+- ChatComposerComponent
+- ChatHeaderComponent
+- CommandSessionDialog
+- MessageActionsBar
+- ConnectionStatusMessage
+- ResearchCard
+- ScrollToBottomButton
+- SessionItemComponent
+- SessionDeleteDialog
+- SessionRenameDialog
+- SidebarSessions
+- McpServerDialog
+- Badge
+- McpServerCard
+- McpLogsDrawer
+- SourceForm
+- SourceRow
+- SourcesManagerDialog
+- InstallConfirmationDialog
+- PlaygroundChat
+- FilterButton
+- PlaygroundActionBar
+- Pip
+- SpeechBubbleStyles
+- SpeechBubble
+- FpsCounter
+- QuestDialogPanel
+- MapPanel
+- FounderVaultPanel
+- InventoryPanel
+- WaveChatPanelsShowcase
+- PlaygroundSidePanel
+- InventoryTab
+- FoundersVaultPlaceholder
+- SkillItem
+- LoadingState
+- ErrorState
+- SkillsTab
+- QuestsTab
+- WorldsTab
+- SettingsTab
+- PineTree
+- BroadleafTree
+- GrassTuft
+- ContactShadow
+- Rock
+- StoneArch
+- Townsfolk
+- MarketStall
+- Building
+- Lantern
+- Banner
+- Flower
+- FlowerPatch
+- LogPile
+- Fountain
+- PathStrip
+- PlazaDisc
+- ClockTower
+- Signpost
+- Bench
+- TrainingRing
+- RaisedDais
+- CrystalCluster
+- EnergyCore
+- ScatteredScenery
+- PlaygroundHud
+- ResourceOrb
+- PlayerCharacter
+- ToastStyles
+- Toast
+- PlaygroundCustomizer
+- Section
+- Swatches
+- Toggles
+- PreviewSvg
+- GlbInner
+- OptionalGlbBody
+- PlaygroundNpcGlb
+- STATS_URL
+- PlaygroundOnlineChip
+- PlaygroundDialog
+- PlaygroundJournal
+- PlaygroundPlayerGlb
+- Ground
+- Monster
+- ClassicalPillars
+- TechPillars
+- ForestDecor
+- TempleDecor
+- ForgeSuperFurnace
+- MemoryTree
+- OracleRingTower
+- FloatCrystal
+- ArenaDecor
+- TrainingDecor
+- PathRibbon
+- HermesStatue
+- PracticeDummy
+- WeaponRack
+- HermesBanner
+- Brazier
+- WorldDecor
+- NpcAccessories
+- NPC
+- Portal
+- QuestZone
+- PlayerAndCamera
+- SummonedFamiliar
+- Html
+- SelfChatBubble
+- BotPlayer
+- DoorTrigger
+- InteriorScene
+- ExitTrigger
+- InteriorExitButton
+- InteriorRoom
+- TavernProps
+- BankProps
+- SmithyProps
+- InnProps
+- ApothecaryProps
+- GuildProps
+- RemotePlayer
+- Scene
+- PlaygroundWorld3D
+- KeyboardShortcutsOverlay
+- SettingsPanel
+- Select
+- Range
+- Check
+- PhotosensitiveWarningSplash
+- NpcCharacter
+- PlaygroundMinimap
+- PlaygroundMap
+- HTMLCanvasElement
+- PlaygroundHeroCanvas
+- SectionTitle
+- StatCard
+- HealthPill
+- AdminStats
+- PlaygroundAdminPanel
+- AgoraAvatar
+- AgoraOnlinePanel
+- AgoraChatPanel
+- AgoraWorld
+- AgoraProfileDrawer
+- BaseCollapsible
+- Collapsible
+- CollapsibleTrigger
+- CollapsiblePanel
+- ThreeDotsSpinner
+- BrailleSpinnerComponent
+- Toaster
+- Switch
+- MenuRoot
+- MenuTrigger
+- MenuContent
+- MenuItem
+- CommandDialogPrimitive
+- CommandDialogTrigger
+- CommandDialogBackdrop
+- CommandDialogViewport
+- CommandDialogPopup
+- Command
+- CommandInput
+- CommandList
+- CommandEmpty
+- CommandPanel
+- CommandGroup
+- CommandGroupLabel
+- CommandCollection
+- CommandItem
+- CommandSeparator
+- CommandShortcut
+- CommandFooter
+- DialogRoot
+- DialogTrigger
+- DialogContent
+- DialogTitle
+- DialogDescription
+- DialogClose
+- PreviewCardTrigger
+- PreviewCardPopup
+- Input
+- AutocompleteInput
+- AutocompletePopup
+- AutocompleteItem
+- AutocompleteSeparator
+- AutocompleteGroup
+- AutocompleteGroupLabel
+- AutocompleteEmpty
+- AutocompleteRow
+- AutocompleteValue
+- AutocompleteList
+- AutocompleteClear
+- AutocompleteStatus
+- AutocompleteCollection
+- AutocompleteTrigger
+- ScrollAreaRoot
+- ScrollAreaViewport
+- ScrollAreaScrollbar
+- ScrollAreaThumb
+- ScrollAreaCorner
+- AlertDialogRoot
+- AlertDialogTrigger
+- AlertDialogContent
+- AlertDialogTitle
+- AlertDialogDescription
+- AlertDialogCancel
+- AlertDialogAction
+- Tabs
+- TabsList
+- TabsTab
+- TabsPanel
+- MemoryPreview
+- MemoryEditor
+- MemorySearch
+- MemoryFileList
+- MemoryRow
+- TailscaleIcon
+- MobileSetupModal
+- MobilePromptTrigger
+- LoginScreen
+- SteerModal
+- GuardrailsModal
+- AgentStreamPanel
+- AgentRegistryCard
+- AgentProgress
+- DOMRect
+- MiniAgentCard
+- HTMLParagraphElement
+- LayoutGroup
+- InspectorPanel
+- HTMLDivElement
+- InspectorToggleButton
+- AgentChatModal
+- AgentViewPanel
+- KillConfirmDialog
+- SwarmConnectionOverlay
+- FilePreviewDialog
+- FileExplorerSidebar
+- ToolIndicator
+- Message
+- MessageAvatar
+- MessageContent
+- MessageActions
+- MessageAction
+- TextShimmer
+- ChatContainerRoot
+- ChatContainerContent
+- ChatContainerScrollAnchor
+- CodeComponent
+- PreComponent
+- H1Component
+- H2Component
+- H3Component
+- H4Component
+- H5Component
+- H6Component
+- PComponent
+- UlComponent
+- OlComponent
+- LiComponent
+- AComponent
+- BlockquoteComponent
+- StrongComponent
+- EmComponent
+- HrComponent
+- TableComponent
+- TheadComponent
+- TbodyComponent
+- TrComponent
+- ThComponent
+- TdComponent
+- TfootComponent
+- MarkdownBlock
+- MarkdownComponent
+- ScrollButton
+- PromptInput
+- PromptInputTextarea
+- PromptInputActions
+- PromptInputAction
+- Thinking
+- TypingIndicator
+- Tool
+- ThinkingIndicator
+- ContextAlertModalComponent
+- Recommendation
+- StatsView
+- UsageDetailsModal
+- UsageSummary
+- ProviderUsageEntry
+- AgentActivity
+- ContextAlertModal
+- UsageMeter
+- ProviderLineRenderer
+- UsageRow
+- ReturnType
+- UsageMeterCompact
+- TerminalWorkspace
+- HTMLInputElement
+- MobileTerminalInput
+- DebugPanel
+- TerminalView
+- GatewayStatusResponse
+- Step
+- ClaudeOnboarding
+- OnboardingWizard
+- ConnectionCheckStep
+- ModelConfigurationStep
+- Styles
+- Joyride
+- OnboardingTour
+- AnthropicLogo
+- OpenRouterLogo
+- GoogleLogo
+- OpenAILogo
+- ProviderSelectStep
+- SearchResultItem
+- QuickActions
+- SearchInput
+- SearchResults
+- SearchResultItemData
+- QuickAction
+- SearchModal
+- SettingsSidebar
+- SettingsMobilePills
+- AssistantAvatarComponent
+- UserAvatarComponent
+- ArtifactsTab
+- ActivityTab
+- FilesTab
+- MemoryTab
+- McpInspectorServer
+- McpTab
+- HTMLPreElement
+- LogsTab
+- SectionHeader
+- Row
+- HermesContent
+- ThemeSwatch
+- EnterpriseThemePicker
+- AppearanceContent
+- Preview
+- ChatContent
+- NotificationsContent
+- AgentBehaviorContent
+- SmartRoutingContent
+- VoiceContent
+- DisplayContent
+- LanguageContent
+- SettingsDialog
+- AgentChatInput
+- AgentChatMessages
+- AgentChatHeader
+- Eyes
+- PixelAvatar
+- CheckeredFloor
+- Desk
+- MeetingTable
+- WaterCooler
+- CoffeeMachine
+- LunchArea
+- Plant
+- Clock
+- ChatLine
+- AnimatedAgent
+- EmptyOffice
+- AmbientParticles
+- IsometricOffice
+- AgentCharacter
+- AgentRosterItem
+- ActivityFeedItem
+- ActivityPanel
+- SwarmCompose
+- SwarmHealthStrip
+- HealthTile
+- SwarmNodeChat
+- TuiPill
+- StandaloneRuntimePane
+- WidgetRail
+- RailPanel
+- MiniStat
+- Stat
+- TopologyBand
+- SwarmTerminal
+- RouterChat
+- RouterClosedDock
+- ModeToggle
+- CodeBlock
+- SkillsScreen
+- SkillsRoute
+- Conductor
+- ConductorRoute
+- Suspense
+- RouteLoadingState
+- MemoryBrowserScreen
+- KnowledgeBrowserScreen
+- MemoryRoute
+- Swarm2Screen
+- Swarm2Route
+- Swarm2Error
+- Swarm2Pending
+- HermesWorldLanding
+- WorldRoute
+- SwarmRoute
+- SwarmError
+- SwarmPending
+- OperationsScreen
+- OperationsRoute
+- OperationsError
+- OperationsPending
+- DashboardScreen
+- DashboardRoute
+- HermesWorldEmbed
+- PlaygroundRoute
+- McpScreen
+- McpRoute
+- RootError
+- AuthStatus
+- Outlet
+- QueryClientProvider
+- ErrorBoundary
+- RootLayout
+- RootDocument
+- AgoraScreen
+- AgoraRoute
+- EarlyAccessRoute
+- Link
+- NotFoundPage
+- FilesError
+- FilesPending
+- Editor
+- FilesRoute
+- IndexRoute
+- VtCapitalScreen
+- VtCapitalRoute
+- ProfilesScreen
+- CrewScreen
+- ProfilesRoute
+- HTMLFormElement
+- Field
+- SubmitState
+- CounterState
+- ReserveRoute
+- TerminalError
+- TerminalRoute
+- SettingsLayoutRoute
+- HermesWorldRoute
+- TasksScreen
+- TasksRoute
+- JobsScreen
+- JobsRoute
+- ChatIndexRoute
+- ChatError
+- ChatRoute
+- ProvidersScreen
+- SettingsProvidersRoute
+- PageThemeSwatch
+- ThemeId
+- WorkspaceThemePicker
+- SettingsSection
+- SettingsRow
+- ClaudeConfigSection
+- ChatDisplaySection
+- ConnectionSettings
+- ConnectionSection
+- SettingsRoute
+- LoaderPreview
+- ReserveConfirmRoute
+- FALLBACK
+routes: []
+source_repo: /opt/data/hermes-workspace
+style_approach: tailwind
+style_system:
+  approach: css-variables
+  css_variables: 124
+  themes: 8
+total_files: 763
