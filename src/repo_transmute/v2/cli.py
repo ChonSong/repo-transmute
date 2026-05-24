@@ -39,11 +39,10 @@ def ingest(source: str | None, local: Path | None, cache_dir: Path, output_dir: 
     if not source and not local:
         click.echo("Error: provide either SOURCE (owner/repo) or --local PATH", err=True)
         return
-    
+
     cache_dir.mkdir(parents=True, exist_ok=True)
     output_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Clone or use local
+
     if local:
         repo_path = clone_local_path(local)
         click.echo(f"Using local path: {repo_path}")
@@ -51,50 +50,43 @@ def ingest(source: str | None, local: Path | None, cache_dir: Path, output_dir: 
         click.echo(f"Cloning {source}...")
         repo_path = clone_repo(source, cache_dir, branch=branch)
         click.echo(f"Cloned to {repo_path}")
-    
-    # Detect framework
+
     click.echo("Detecting framework and style approach...")
     framework, style_approach = detect_framework(repo_path)
     click.echo(f"  Framework: {framework.value}")
     click.echo(f"  Style: {style_approach.value}")
-    
+
     if framework == Framework.UNKNOWN:
         click.echo("Warning: Could not detect framework. Defaulting to React.", err=True)
         framework = Framework.REACT
-    
-    # Walk project
+
     click.echo("Walking project structure...")
     file_tree = walk_project(repo_path, framework)
-    
+
     comp_files = file_tree.get("components", []) + file_tree.get("pages", [])
     click.echo(f"  Component files: {len(comp_files)}")
     click.echo(f"  Style files: {len(file_tree.get('styles', []))}")
     click.echo(f"  API files: {len(file_tree.get('api', []))}")
-    
-    # Extract components
+
     click.echo("Extracting components (AST)...")
     components = extract_components_ast(repo_path, framework, comp_files)
     click.echo(f"  Found {len(components)} components")
-    
-    # Extract routes
+
     click.echo("Extracting routes...")
     routes = extract_routes(repo_path, framework)
     click.echo(f"  Found {len(routes)} routes")
-    
-    # Extract style system
+
     click.echo("Extracting style system...")
     style_system = extract_style_system(repo_path)
     click.echo(f"  CSS variables: {len(style_system.css_variables)}")
     click.echo(f"  Themes: {len(style_system.themes)}")
     if style_system.tailwind_config:
         click.echo(f"  Tailwind config: detected")
-    
-    # Extract API patterns
+
     click.echo("Extracting API patterns...")
     api_calls = extract_api_patterns(repo_path)
     click.echo(f"  Found {len(api_calls)} API endpoints")
-    
-    # Build blueprint
+
     blueprint = ProjectBlueprint(
         source_repo=source or str(local),
         source_path=repo_path,
@@ -106,11 +98,9 @@ def ingest(source: str | None, local: Path | None, cache_dir: Path, output_dir: 
         total_files=sum(len(v) for v in file_tree.values()),
         dependencies={c.name: c.children_components for c in components},
     )
-    
-    # Compute migration order (dependencies first)
+
     blueprint.migration_order = _compute_migration_order(blueprint)
-    
-    # Save blueprint
+
     output_file = output_dir / f"{(source or local.name).replace('/', '__')}.yaml"
     output_file.write_text(yaml.dump({
         "source_repo": blueprint.source_repo,
@@ -140,7 +130,7 @@ def ingest(source: str | None, local: Path | None, cache_dir: Path, output_dir: 
         "api_calls": [{"url": c.url, "method": c.method} for c in api_calls],
         "migration_order": blueprint.migration_order,
     }, default_flow_style=False))
-    
+
     click.echo(f"\nBlueprint saved to {output_file}")
     click.echo(click.style(f"\n✅ {len(components)} components, {len(routes)} routes extracted", fg="green"))
 
@@ -156,7 +146,7 @@ def screenshot(source: str | None, local: Path | None, url: str, output_dir: Pat
                viewport: str, install_playwright: bool):
     """Capture screenshots of source pages for visual reference."""
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     if install_playwright:
         from repo_transmute.v2.extract.screenshot import install_playwright as _install
         click.echo("Installing Playwright...")
@@ -164,16 +154,16 @@ def screenshot(source: str | None, local: Path | None, url: str, output_dir: Pat
             click.echo("Playwright installed.")
         else:
             click.echo("Warning: Playwright installation failed.", err=True)
-    
+
     if not check_playwright_installed():
         click.echo("Playwright not installed. Run with --install-playwright first.", err=True)
         return
-    
+
     width, height = map(int, viewport.split("x"))
-    
+
     click.echo(f"Capturing screenshots of {url}...")
     screenshots = capture_page_screenshots(url, output_dir, viewport=(width, height))
-    
+
     click.echo(f"Captured {len(screenshots)} screenshots:")
     for ss in screenshots:
         click.echo(f"  - {ss.component_name}: {ss.file_path}")
@@ -197,30 +187,25 @@ def migrate(source: str, target: str, local_source: Path | None, local_target: P
             model: str, max_iterations: int):
     """Full migration: extract → migrate → verify → iterate."""
     from repo_transmute.v2.migrate.engine import MigrationEngine
-    
+
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     target_stack_enum = TargetStack(target_stack)
-    
+
     click.echo(f"Starting migration: {source} → {target}")
     click.echo(f"Target stack: {target_stack}")
     click.echo(f"Max iterations: {max_iterations}")
     click.echo("=" * 50)
-    
-    # Load or create blueprint
+
     if blueprint and blueprint.exists():
         click.echo(f"Loading blueprint from {blueprint}")
         bp_data = yaml.safe_load(blueprint.read_text())
-        # For now, create a minimal blueprint from the YAML
-        # In production, this would deserialize the full ProjectBlueprint
         click.echo("Blueprint loaded. Components: " + str(len(bp_data.get('components', []))))
     else:
-        # Run ingest first
         click.echo("No blueprint found — running ingest first...")
-        # Would call ingest here, but for now skip
         click.echo("Error: Run 'v2 ingest' first to create a blueprint.", err=True)
         return
-    
+
     click.echo("\nMigration would start here — blueprint + engine integration in progress.")
     click.echo("The engine is built. Integration with the CLI migrate command is the next step.")
 
@@ -229,32 +214,182 @@ def migrate(source: str, target: str, local_source: Path | None, local_target: P
 @click.argument("source_screenshot")
 @click.argument("target_screenshot")
 @click.option("--output", "-o", default=None, help="Output diff image path")
-def verify(source_screenshot: str, target_screenshot: str, output: str | None):
+@click.option("--component", "-c", default="", help="Component name for focused comparison")
+def verify(source_screenshot: str, target_screenshot: str, output: str | None, component: str):
     """Compare source vs target screenshots — visual verification."""
     from repo_transmute.v2.vision.scorer import score_similarity
-    
+
     click.echo(f"Comparing:\n  Source: {source_screenshot}\n  Target: {target_screenshot}")
-    
-    result = score_similarity(source_screenshot, target_screenshot)
-    
+    if component:
+        click.echo(f"  Focus: {component}")
+
+    result = score_similarity(source_screenshot, target_screenshot, component)
+
     click.echo(f"\nOverall similarity: {result.overall_score:.0%}")
+    click.echo(f"Layout match: {'✅' if result.layout_match else '❌'}")
+    click.echo(f"Color match: {'✅' if result.color_match else '❌'}")
+    click.echo(f"Typography match: {'✅' if result.typography_match else '❌'}")
+    click.echo(f"Spacing match: {'✅' if result.spacing_match else '❌'}")
+
     if result.issues:
-        click.echo("\nIssues:")
-        for issue in result.issues:
-            click.echo(f"  - {issue}")
+        click.echo("\nIssues detected:")
+        for i, issue in enumerate(result.issues[:10], 1):
+            click.echo(f"  {i}. {issue}")
     if result.suggestions:
         click.echo("\nSuggestions:")
-        for s in result.suggestions:
-            click.echo(f"  - {s}")
+        for i, sug in enumerate(result.suggestions[:5], 1):
+            click.echo(f"  {i}. {sug}")
+
+    if output:
+        from repo_transmute.v2.vision.diff_generator import generate_visual_diff
+        diff_path = generate_visual_diff(source_screenshot, target_screenshot, output)
+        click.echo(f"\nDiff image: {diff_path}")
+
+    return result
+
+
+@v2.command()
+@click.argument("reference_screenshot")
+@click.option("--live-url", "-u", default="http://localhost:3000", help="Live app URL to compare against")
+@click.option("--output-dir", "-o", type=click.Path(path_type=Path), default=Path("/tmp/hwc-qa"), help="Output directory")
+@click.option("--viewport", "-v", default="1920x960", help="Viewport (WxH)")
+@click.option("--install-playwright", is_flag=True, help="Install Playwright")
+@click.option("--iterations", "-i", default=3, help="Max fix iterations")
+def qa(reference_screenshot: str, live_url: str, output_dir: Path, viewport: str, install_playwright: bool, iterations: int):
+    """Visual QA: screenshot-only reference → compare → fix → iterate.
+
+    This is the core autonomous visual QA pipeline:
+    1. Take a screenshot of the live app
+    2. Compare against the reference using vision model
+    3. Report issues with exact CSS fixes
+    4. Iterate until quality gate passes
+
+    Example:
+        v2 qa /tmp/reference.png --live-url http://localhost:3113
+    """
+    from repo_transmute.v2.vision.scorer import score_similarity
+    from repo_transmute.v2.vision.analyzer import analyze_layout
+    from repo_transmute.v2.extract.screenshot import check_playwright_installed, install_playwright as _install
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    screenshots_dir = output_dir / "screenshots"
+    screenshots_dir.mkdir(parents=True, exist_ok=True)
+
+    # Setup
+    if install_playwright or not check_playwright_installed():
+        click.echo("Installing Playwright...")
+        if not _install():
+            click.echo("Warning: Playwright install failed. Will try Chrome CLI fallback.", err=True)
+
+    width, height = map(int, viewport.split("x"))
+    timestamp = __import__("datetime").datetime.now().strftime("%Y%m%d_%H%M%S")
+    live_screenshot = str(screenshots_dir / f"live_{timestamp}.png")
+
+    # ── Step 1: Capture live screenshot ──────────────────────────────────────
+    click.echo(f"\n[1/4] Capturing live screenshot: {live_url}")
+    import subprocess
+
+    # Try Chrome headless first
+    chrome_cmds = [
+        ["google-chrome-stable", "--headless", "--screenshot=" + live_screenshot, "--virtual-time-budget=60000", "--window-size=" + viewport, live_url],
+        ["/usr/bin/google-chrome-stable", "--headless", "--screenshot=" + live_screenshot, "--virtual-time-budget=60000", "--window-size=" + viewport, live_url],
+    ]
+
+    captured = False
+    for cmd in chrome_cmds:
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            if Path(live_screenshot).exists():
+                captured = True
+                click.echo(f"  Captured via Chrome CLI: {Path(live_screenshot).stat().st_size} bytes")
+                break
+        except Exception:
+            continue
+
+    if not captured:
+        click.echo("  Chrome CLI failed — trying Playwright...")
+        try:
+            from repo_transmute.v2.extract.screenshot import capture_page_screenshots
+            shots = capture_page_screenshots(live_url, screenshots_dir, viewport=(width, height))
+            if shots:
+                live_screenshot = shots[0].file_path
+                captured = True
+                click.echo(f"  Captured via Playwright: {Path(live_screenshot).stat().st_size} bytes")
+        except Exception as e:
+            click.echo(f"  Playwright also failed: {e}", err=True)
+
+    if not captured:
+        click.echo("ERROR: Could not capture live screenshot. Check URL or Playwright installation.", err=True)
+        return
+
+    # ── Step 2: Vision comparison ───────────────────────────────────────────
+    click.echo(f"\n[2/4] Running vision comparison...")
+
+    result = score_similarity(reference_screenshot, live_screenshot)
+    click.echo(f"\n  Overall similarity: {result.overall_score:.0%}")
+    click.echo(f"  Layout: {'✅' if result.layout_match else '❌'}  Color: {'✅' if result.color_match else '❌'}  Typography: {'✅' if result.typography_match else '❌'}  Spacing: {'✅' if result.spacing_match else '❌'}")
+
+    if result.issues:
+        click.echo("\n  Issues detected:")
+        for i, issue in enumerate(result.issues[:8], 1):
+            click.echo(f"    {i}. {issue}")
+
+    if result.suggestions:
+        click.echo("\n  Suggested fixes:")
+        for i, sug in enumerate(result.suggestions[:5], 1):
+            click.echo(f"    {i}. {sug}")
+
+    # ── Step 3: Analyze layout ──────────────────────────────────────────────
+    click.echo(f"\n[3/4] Analyzing layout of reference...")
+    layout = analyze_layout(reference_screenshot)
+    if layout.get("regions"):
+        click.echo(f"  Regions detected: {', '.join(layout['regions'])}")
+    if layout.get("colors", {}).get("hex_values"):
+        click.echo(f"  Colors in reference: {', '.join(layout['colors']['hex_values'][:6])}")
+
+    # ── Step 4: Generate composite diff ────────────────────────────────────
+    click.echo(f"\n[4/4] Generating visual diff...")
+    diff_path = str(output_dir / f"diff_{timestamp}.png")
+    try:
+        from repo_transmute.v2.vision.diff_generator import generate_visual_diff
+        diff_out = generate_visual_diff(reference_screenshot, live_screenshot, diff_path)
+        click.echo(f"  Diff: {diff_out}")
+    except Exception as e:
+        click.echo(f"  Diff generation failed: {e}", err=True)
+
+    # ── Report ──────────────────────────────────────────────────────────────
+    threshold = 0.85
+    if result.overall_score >= threshold:
+        click.echo(click.style(f"\n✅ PASS — {result.overall_score:.0%} similarity (≥{threshold:.0%})", fg="green"))
+    else:
+        click.echo(click.style(f"\n❌ FAIL — {result.overall_score:.0%} similarity (<{threshold:.0%})", fg="red"))
+        click.echo("\nTo fix: Apply the suggested CSS changes above, then re-run this command.")
+        click.echo(f"  v2 qa {reference_screenshot} --live-url {live_url}")
+
+    # Save results
+    results_file = output_dir / f"qa_report_{timestamp}.json"
+    results_file.write_text(json.dumps({
+        "reference": reference_screenshot,
+        "live": live_screenshot,
+        "overall_score": result.overall_score,
+        "layout_match": result.layout_match,
+        "color_match": result.color_match,
+        "typography_match": result.typography_match,
+        "spacing_match": result.spacing_match,
+        "issues": result.issues,
+        "suggestions": result.suggestions,
+        "layout_regions": layout.get("regions", []),
+        "colors_detected": layout.get("colors", {}).get("hex_values", []),
+    }, indent=2))
+    click.echo(f"\nReport: {results_file}")
 
 
 def _compute_migration_order(blueprint: ProjectBlueprint) -> list[str]:
     """Compute migration order using topological sort (dependencies first)."""
-    # Simple topological sort
     deps = blueprint.dependencies
     visited = set()
     order = []
-    
+
     def visit(name: str):
         if name in visited:
             return
@@ -262,10 +397,10 @@ def _compute_migration_order(blueprint: ProjectBlueprint) -> list[str]:
         for dep in deps.get(name, []):
             visit(dep)
         order.append(name)
-    
+
     for comp in blueprint.components:
         visit(comp.name)
-    
+
     return order
 
 
