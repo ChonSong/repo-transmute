@@ -15,15 +15,16 @@ AI-powered code transpilation engine that:
 ## Quick Start
 
 ```bash
-# Clone repo and extract blueprint
+# v2 (recommended) — Vision-driven migration
+cd repo-transmute
+PYTHONPATH=src python3 -m repo_transmute.v2.cli ingest <owner/repo>
+
+# Legacy v1 pipeline
 cd repo-transmute
 PYTHONPATH=src python3 -m repo_transmute.cli ingest <owner/repo>
 
-# Or run full pipeline (ingest + transpile + validate)
+# Legacy v1 full pipeline
 PYTHONPATH=src python3 -m repo_transmute.cli pipeline <owner/repo> --target typescript
-
-# Check status
-PYTHONPATH=src python3 -m repo_transmute.cli status
 ```
 
 ## Current Status
@@ -36,9 +37,56 @@ PYTHONPATH=src python3 -m repo_transmute.cli status
 | Phase 4: Multi-Agent Pipeline | 🔄 In Progress |
 | Phase 5: Dependency Resolution | ⏳ Pending |
 | Phase 6: TXTAI Semantic Layer | ⏳ Pending |
-| Phase 7: Frontend Migration | ✅ Complete |
+| Phase 7: Frontend Migration | ✅ Complete (v2) |
 
-## CLI Commands
+---
+
+# v2 CLI Commands (Recommended)
+
+v2 uses vision-driven migration with AST extraction, Playwright screenshots, LLM code generation, and self-healing verification.
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `v2 ingest <repo>` | Clone repo, detect framework (React/Vue/Svelte), extract AST blueprint |
+| `v2 ingest --local /path` | Use local path instead of GitHub repo |
+| `v2 screenshot <repo>` | Capture Playwright screenshots for visual reference |
+| `v2 migrate <source> <target>` | Full migration: extract → migrate → verify → iterate |
+| `v2 verify <src_ss> <tgt_ss>` | Compare source vs target screenshots (visual verification) |
+| `v2 qa <reference.png>` | Autonomous QA: screenshot → compare → report → iterate |
+
+### Examples
+
+```bash
+# Ingest a repo and extract blueprint
+PYTHONPATH=src python3 -m repo_transmute.v2.cli ingest owner/repo
+
+# Ingest from local path
+PYTHONPATH=src python3 -m repo_transmute.v2.cli ingest --local /path/to/project
+
+# Capture screenshots for visual reference
+PYTHONPATH=src python3 -m repo_transmute.v2.cli screenshot owner/repo --url http://localhost:3000
+
+# Full migration to React TypeScript
+PYTHONPATH=src python3 -m repo_transmute.v2.cli migrate owner/repo target-name \
+  --target-stack react-ts \
+  --output-dir ./data/migrated
+
+# Verify visual similarity
+PYTHONPATH=src python3 -m repo_transmute.v2.cli verify reference.png output.png
+
+# Autonomous QA loop (score ≥85% required)
+PYTHONPATH=src python3 -m repo_transmute.v2.cli qa /tmp/reference.png \
+  --live-url http://localhost:3113 \
+  --iterations 3
+```
+
+---
+
+# Legacy v1 CLI Commands
+
+> **Note:** v1 commands are legacy. Use v2 for new migrations.
 
 | Command | Description |
 |---------|-------------|
@@ -49,12 +97,12 @@ PYTHONPATH=src python3 -m repo_transmute.cli status
 | `transpile <blueprint> -t <target>` | Convert blueprint to target language |
 | `validate <file> -l <language>` | Validate transpiled code |
 | `status` | Show cached repos and blueprints |
-| **`frontend_blueprint <path>`** | **Extract frontend blueprint (components, routes, CSS, APIs)** |
-| **`theme_analysis <src> -t <tgt>`** | **Analyze theme system compatibility** |
-| **`api_analysis <src> -t <tgt>`** | **Generate API migration blueprint** |
-| **`frontend_migrate <src> <tgt>`** | **Full frontend migration analysis + plan** |
+| `frontend_blueprint <path>` | Extract frontend blueprint (components, routes, CSS, APIs) |
+| `theme_analysis <src> -t <tgt>` | Analyze theme system compatibility |
+| `api_analysis <src> -t <tgt>` | Generate API migration blueprint |
+| `frontend_migrate <src> <tgt>` | Full frontend migration analysis + plan |
 
-### Examples
+### v1 Examples
 
 ```bash
 # Ingest a repo and get its blueprint
@@ -76,6 +124,8 @@ PYTHONPATH=src python3 -m repo_transmute.cli deps lfnovo/open-notebook -o deps.y
 PYTHONPATH=src python3 -m repo_transmute.cli validate output.ts --language typescript
 ```
 
+---
+
 ## Architecture
 
 ```
@@ -89,6 +139,15 @@ PYTHONPATH=src python3 -m repo_transmute.cli validate output.ts --language types
 │ Multi-Agent │◀───│  Transpiler │───▶│   Output    │
 │   Pipeline  │    │   (LLM)     │    │   Storage   │
 └─────────────┘    └─────────────┘    └─────────────┘
+```
+
+### v2 Architecture (Vision-Driven)
+
+```
+┌─────────┐   ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌─────────┐
+│  Ingest │──▶│ Extract │──▶│ Migrate │──▶│ Verify  │──▶│  Heal   │
+│ (clone) │   │  (AST)  │   │  (LLM)  │   │(vision) │   │ (retry) │
+└─────────┘   └─────────┘   └─────────┘   └─────────┘   └─────────┘
 ```
 
 ## Compatibility Routing
@@ -133,25 +192,26 @@ ZAI_API_KEY=...            # Backup (GLM models)
 ```
 repo-transmute/
 ├── src/repo_transmute/
-│   ├── cli.py              # CLI entry point (backend + frontend commands)
-│   ├── ingestion/          # Clone, detect, walk
-│   ├── blueprint/          # Extract, storage
-│   ├── frontend/           # **NEW** Frontend migration modules
-│   │   ├── component_extractor.py  # JSX/TSX component parsing
-│   │   ├── css_mapper.py           # CSS/theme extraction + mapping
-│   │   └── api_rewriter.py         # API call pattern detection
-│   ├── transpiler/         # LLM integration
-│   │   ├── llm.py         # API calls
-│   │   ├── prompts.py     # Prompt templates (backend + frontend)
-│   │   ├── compatibility.py # Routing table (backend + frontend)
-│   │   └── validate.py    # Output validation (Rust, TS, Python, React)
-│   ├── dependency/         # Dependency graph
+│   ├── cli.py              # Legacy v1 CLI entry point
+│   ├── v2/                 # v2 vision-driven engine
+│   │   ├── cli.py          # v2 CLI entry point
+│   │   ├── ingest/         # Clone, detect, walk
+│   │   ├── extract/        # AST extraction (React/Vue/Svelte)
+│   │   ├── migrate/        # Code generation + style mapping
+│   │   ├── vision/         # Screenshot analysis + diff generation
+│   │   ├── verify/         # Build verification + report
+│   │   └── heal/           # Self-healing retry logic
+│   ├── frontend/           # Legacy frontend migration modules
+│   ├── transpiler/         # Legacy LLM integration
+│   ├── dependency/        # Dependency graph
 │   └── pipeline/           # Multi-agent coordinator
 ├── data/
-│   ├── blueprints/         # YAML blueprints
-│   ├── frontend/           # Frontend blueprints
-│   ├── outputs/           # Transpiled code
-│   └── cache/             # Cloned repos
+│   ├── blueprints/         # Extracted YAML blueprints
+│   ├── frontend/           # Frontend blueprints (v1)
+│   ├── cache/              # Cloned repositories
+│   ├── screenshots/        # Playwright screenshots (v2)
+│   ├── migrated/          # Migrated components (v2 output)
+│   └── outputs/           # Legacy transpiled code
 ├── CLAUDE.md              # Developer docs (how to extend)
 ├── ARCHITECTURE.md        # Detailed architecture
 ├── PIPELINE.md            # Multi-agent pipeline docs
@@ -173,44 +233,90 @@ repo-transmute/
 | minimaxir/big-list-of-naughty-strings | Go | Go | 85% | ✅ |
 | lfnovo/open-notebook | TypeScript/Python | Blueprint extracted | 95% | ✅ |
 
-## Frontend Migration (Phase 7)
+## Data/migrated/ Directory (v2 Output)
 
-RepoTransmute now supports **frontend-to-frontend migration** — moving React components, CSS themes, and API patterns between projects.
+After v2 migration, the `data/migrated/` directory contains:
 
-### What it does
-
-1. **Component Extraction** — Parses JSX/TSX files to extract component structure (props, state, hooks, children, API calls, CSS approach)
-2. **Theme Analysis** — Extracts CSS variable themes, detects approach (css-vars, tailwind, styled-components), compares compatibility
-3. **API Pattern Detection** — Finds all fetch/axios/EventSource/WebSocket calls, generates URL mapping rules
-4. **Compatibility Scoring** — Rates migration feasibility based on framework, component count, SSR usage, theme compatibility
-
-### Example
-
-```bash
-# Extract frontend blueprint
-PYTHONPATH=src python3 -m repo_transmute.cli frontend_blueprint /path/to/source-project
-
-# Compare theme systems
-PYTHONPATH=src python3 -m repo_transmute.cli theme_analysis /path/to/source -t /path/to/target
-
-# Analyze API patterns
-PYTHONPATH=src python3 -m repo_transmute.cli api_analysis /path/to/source -t /path/to/target
-
-# Full migration analysis
-PYTHONPATH=src python3 -m repo_transmute.cli frontend_migrate /path/to/source /path/to/target \
-  --framework react --style tailwind --dry-run
+```
+data/migrated/
+├── MIGRATION_REPORT.md     # Summary of migration results
+├── migration_report.json   # JSON report with per-component scores
+├── component-name.tsx      # Migrated React components
+└── ...
 ```
 
-### Modules
+### MIGRATION_REPORT.md Contents
 
-| Module | Purpose |
-|--------|---------|
-| `frontend/component_extractor.py` | JSX/TSX component + route extraction |
-| `frontend/css_mapper.py` | CSS variable/theme extraction + compatibility analysis |
-| `frontend/api_rewriter.py` | API call pattern detection + rewrite rule generation |
-| `transpiler/prompts.py` | Frontend migration LLM prompts |
-| `transpiler/validate.py` | React/TSX validation (tsc + vite build + syntax check) |
-| `transpiler/compatibility.py` | Frontend routing table + compatibility checker |
+```markdown
+## Summary
+
+| Metric | Value |
+|--------|-------|
+| Total Components | 36 |
+| Completed | 36 |
+| Failed | 0 |
+| Needs Fix | 0 |
+| Success Rate | 100% |
+
+## Per-Component Results
+
+| Component | Status | Vision Score | Attempts |
+|-----------|--------|-------------|----------|
+| chat-screen.tsx | ✅ PASS | 92% | 1 |
+| dashboard-screen.tsx | ✅ PASS | 88% | 1 |
+...
+```
+
+## Verification & Quality Threshold
+
+**v2 QA threshold: 85% similarity**
+
+视觉验证使用以下维度评分：
+- Overall similarity: ≥85% = PASS, <85% = FAIL
+- Layout match
+- Color match
+- Typography match
+- Spacing match
+
+## Self-Healing (v2)
+
+The self-healing pipeline retries failed migrations with adjusted prompts:
+
+```python
+retry_migration(component, target_stack, context, max_retries=3)
+```
+
+Each retry adds:
+- Build errors from previous attempt
+- Vision feedback from previous attempt
+- Fix suggestions from vision model
+
+## Frontend Migration (Phase 7 - v2)
+
+RepoTransmute v2 supports **frontend-to-frontend migration** using vision-driven approach:
+
+1. **AST Extraction** — Parses React/Vue/Svelte components to extract props, state, hooks, API calls
+2. **Screenshot Capture** — Playwright screenshots for visual reference
+3. **LLM Code Generation** — Migrate to target framework with style mapping
+4. **Vision Verification** — Compare screenshots to verify visual fidelity
+5. **Self-Healing** — Retry failed components with accumulated feedback
+
+### v2 Migrate Command
+
+```bash
+PYTHONPATH=src python3 -m repo_transmute.v2.cli migrate owner/repo target-name \
+  --target-stack react-ts \
+  --output-dir ./data/migrated \
+  --max-iterations 3
+```
+
+### v2 QA Command (Autonomous Loop)
+
+```bash
+PYTHONPATH=src python3 -m repo_transmute.v2.cli qa /tmp/reference.png \
+  --live-url http://localhost:3113 \
+  --iterations 3
+```
 
 ## Test Results
 
@@ -256,4 +362,4 @@ See [CLAUDE.md](./CLAUDE.md) for:
 
 ---
 
-*Last updated: 2026-03-20*
+*Last updated: 2026-05-24*
